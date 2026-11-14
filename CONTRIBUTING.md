@@ -40,6 +40,20 @@ GitHub provides additional document on [forking a repository](https://help.githu
 [creating a pull request](https://help.github.com/articles/creating-a-pull-request/).
 
 
+## Adding or changing an accelerator
+
+Read [AGENTS.md](AGENTS.md) and [docs/conventions.md](docs/conventions.md)
+first. In short:
+
+* Start a new accelerator by copying [templates/lambda-target](templates/lambda-target/)
+  into `industries/<industry>/<accelerator>/`.
+* Keep each accelerator self-contained, with the standard Makefile targets
+  and README sections.
+* Run `make test-unit` in every accelerator you changed. CI runs the same
+  target for each changed accelerator.
+* Don't include account IDs, credentials or other environment-specific values.
+
+
 ## Finding contributions to work on
 Looking at the existing issues is a great way to find something to contribute on. As our projects, by default, use the default GitHub issue labels (enhancement/bug/duplicate/help wanted/invalid/question/wontfix), looking at any 'help wanted' issues is a great place to start.
 

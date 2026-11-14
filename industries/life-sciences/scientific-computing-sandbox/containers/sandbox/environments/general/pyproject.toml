@@ -1,0 +1,35 @@
+# Sandbox environment `general`: the root layer that every other environment builds on.
+#
+# `dependencies` are this layer's own direct packages, exactly pinned. `make lock` resolves them for linux/arm64 into
+# a hash-checked requirements.txt (child layers resolve against it, so they never change a pin set here).
+# [tool.code-sandbox] describes the environment to agents: list_environments, get_sandbox_info and the README table
+# all come from it through `npm run environments:catalog`.
+[project]
+name = "sandbox-env-general"
+version = "0.1.0"
+description = "NumPy, pandas and SciPy for tables, statistics and numerical work, such as parsing and summarizing QC reports. Every other environment includes these packages too."
+license = "MIT-0"
+requires-python = ">=3.13,<3.14"
+dependencies = [
+    "numpy==2.5.4",
+    "pandas==3.1.1",
+    "scipy==1.18.1",
+]
+
+[tool.uv]
+package = false
+
+[tool.code-sandbox]
+title = "General scientific Python"
+use-for = [
+    "Reading, joining, reshaping and summarizing tables (CSV, TSV, JSON) with pandas",
+    "Statistical tests, distributions, regression, optimization and linear algebra with SciPy and NumPy",
+    "Parsing and aggregating text reports such as FastQC summaries, samtools flagstat and Picard metrics",
+    "Scripts that need only the Python standard library",
+]
+notes = ["No plotting library is installed."]
+
+[tool.code-sandbox.packages]
+numpy = { import = "numpy", summary = "N-dimensional arrays, vectorized math, random numbers, linear algebra" }
+pandas = { import = "pandas", summary = "Data frames: read, filter, join, group, pivot and write tables" }
+scipy = { import = "scipy", summary = "Statistics (scipy.stats), optimization, interpolation, sparse matrices, signal processing" }

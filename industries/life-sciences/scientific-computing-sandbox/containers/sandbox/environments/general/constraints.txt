@@ -1,0 +1,4 @@
+# Bounds on this layer's transitive dependencies, so that descendant layers can resolve against its lock.
+# `make lock` passes this file to `uv pip compile --constraints` for this layer only; children inherit the result.
+# botocore (through s3fs in sctraj) requires python-dateutil<3.
+python-dateutil<3

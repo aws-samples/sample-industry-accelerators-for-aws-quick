@@ -1,0 +1,37 @@
+# Sandbox environment `dicom`, built on `general`. See environments/general/pyproject.toml for how these files are
+# used; run `make lock` after changing dependencies and `npm run environments:catalog` after changing anything.
+[project]
+name = "sandbox-env-dicom"
+version = "0.1.0"
+description = "Medical imaging files: pydicom to read, write, inspect and de-identify DICOM, nibabel for NIfTI and other neuroimaging formats, and the dcm2niix command to convert DICOM series to NIfTI with BIDS JSON sidecars."
+license = "MIT-0"
+requires-python = ">=3.13,<3.14"
+dependencies = [
+    "pydicom==3.0.2",
+    "nibabel==5.4.2",
+    "dcm2niix==1.0.20261029",
+]
+
+[tool.uv]
+package = false
+
+[tool.code-sandbox]
+title = "Medical imaging (DICOM and NIfTI)"
+parent = "general"
+use-for = [
+    "Read DICOM headers and pixel data, list series and tags, check acquisition parameters",
+    "De-identify or edit DICOM attributes and write new DICOM files",
+    "Convert DICOM series to NIfTI (with BIDS sidecars) using dcm2niix",
+    "Load, resample, reorient and save NIfTI volumes and compute simple image statistics",
+]
+notes = ["Compressed transfer syntaxes that need extra codecs (for example JPEG 2000 through pylibjpeg or GDCM) may not decode."]
+
+[tool.code-sandbox.packages]
+pydicom = { import = "pydicom", summary = "Read, modify and write DICOM files and datasets" }
+nibabel = { import = "nibabel", summary = "Read and write NIfTI, MGH, GIFTI, CIFTI and other neuroimaging formats" }
+dcm2niix = { summary = "DICOM to NIfTI converter; use the dcm2niix command" }
+
+[[tool.code-sandbox.programs]]
+name = "dcm2niix"
+summary = "Convert DICOM series to NIfTI with BIDS JSON sidecars (dcm2niix -z y -o <out_dir> <dicom_dir>)"
+check = ["dcm2niix", "-h"]

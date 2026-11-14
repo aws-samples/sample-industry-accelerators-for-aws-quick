@@ -1,0 +1,303 @@
+[
+  {
+    "name": "get_sandbox_info",
+    "title": "Get sandbox information",
+    "description": "Describe the user's sandbox for this environment: its title and description, installed Python packages and\nversions, CPUs, memory, free disk, running jobs, limits, files in /workspace, and how long the sandbox has been up.\nCall it before the first execute_code of a task: the sandbox is shared by the user's conversations and may hold\nfiles from earlier work. Call it again if files you created are missing: a sandbox that was stopped after being\nidle comes back empty, with a new sandbox_instance.",
+    "inputSchema": {
+      "properties": {},
+      "title": "get_sandbox_infoArguments",
+      "type": "object"
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    }
+  },
+  {
+    "name": "execute_code",
+    "title": "Execute code",
+    "description": "Run Python or bash code in the sandbox and return status, exit_code, stdout and stderr. Python runs in the environment's own virtual environment, which has only that environment's packages (get_sandbox_info lists them); packages cannot be installed. Each call is a new process: no variables survive between calls, so write intermediate results to files under /workspace (in a directory named for the task, since other conversations share the sandbox) and read them back in later calls. Save figures and images to files. The sandbox has no internet access: code cannot download data, call web APIs or fetch example datasets, so pass inputs with write_file. Use background=true for work longer than about a minute, then poll get_job.",
+    "inputSchema": {
+      "properties": {
+        "code": {
+          "description": "Source code to run, up to 262144 characters.",
+          "maxLength": 262144,
+          "minLength": 1,
+          "title": "Code",
+          "type": "string"
+        },
+        "language": {
+          "default": "python",
+          "description": "python (default) or bash.",
+          "enum": [
+            "python",
+            "bash"
+          ],
+          "title": "Language",
+          "type": "string"
+        },
+        "cwd": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Working directory (default /workspace).",
+          "title": "Cwd"
+        },
+        "timeout_seconds": {
+          "default": 300,
+          "description": "Seconds to wait before the process is killed, 1 to 600 (default 300). Ignored with background=true.",
+          "maximum": 600,
+          "minimum": 1,
+          "title": "Timeout Seconds",
+          "type": "integer"
+        },
+        "background": {
+          "default": false,
+          "description": "Start the process and return a job_id at once; poll it with get_job.",
+          "title": "Background",
+          "type": "boolean"
+        },
+        "max_output_bytes": {
+          "default": 65536,
+          "description": "Maximum bytes of stdout and of stderr to return (the tail), 1 to 262144.",
+          "maximum": 262144,
+          "minimum": 1,
+          "title": "Max Output Bytes",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "code"
+      ],
+      "title": "execute_codeArguments",
+      "type": "object"
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "idempotentHint": false,
+      "openWorldHint": true
+    }
+  },
+  {
+    "name": "get_job",
+    "title": "Get job",
+    "description": "Get the status, exit_code and output tail of a job started by execute_code, optionally waiting for it to\nfinish. Without job_id, list the jobs in this sandbox.",
+    "inputSchema": {
+      "properties": {
+        "job_id": {
+          "anyOf": [
+            {
+              "maxLength": 64,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Job ID from execute_code. Omit it to list all jobs in this sandbox.",
+          "title": "Job Id"
+        },
+        "wait_seconds": {
+          "default": 0,
+          "description": "Seconds to wait for the job to finish before returning, 0 to 600.",
+          "maximum": 600,
+          "minimum": 0,
+          "title": "Wait Seconds",
+          "type": "integer"
+        },
+        "max_output_bytes": {
+          "default": 65536,
+          "description": "Maximum bytes of stdout and of stderr to return (the tail), 1 to 262144.",
+          "maximum": 262144,
+          "minimum": 1,
+          "title": "Max Output Bytes",
+          "type": "integer"
+        }
+      },
+      "title": "get_jobArguments",
+      "type": "object"
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    }
+  },
+  {
+    "name": "cancel_job",
+    "title": "Cancel job",
+    "description": "Kill a running job and its child processes and return its final status and output tail.",
+    "inputSchema": {
+      "properties": {
+        "job_id": {
+          "description": "Job ID to cancel.",
+          "maxLength": 64,
+          "title": "Job Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "job_id"
+      ],
+      "title": "cancel_jobArguments",
+      "type": "object"
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "idempotentHint": true,
+      "openWorldHint": false
+    }
+  },
+  {
+    "name": "read_file",
+    "title": "Read file",
+    "description": "Read a file from the sandbox, up to 1 MiB per call (use offset to page through larger files). Use\nencoding=base64 for binary files such as PNG images.",
+    "inputSchema": {
+      "properties": {
+        "path": {
+          "description": "Path in the sandbox: absolute, or relative to /workspace.",
+          "title": "Path",
+          "type": "string"
+        },
+        "encoding": {
+          "default": "text",
+          "description": "text (UTF-8, default) or base64 for binary files.",
+          "enum": [
+            "text",
+            "base64"
+          ],
+          "title": "Encoding",
+          "type": "string"
+        },
+        "offset": {
+          "default": 0,
+          "description": "Byte offset to start reading from (default 0).",
+          "minimum": 0,
+          "title": "Offset",
+          "type": "integer"
+        },
+        "max_bytes": {
+          "default": 262144,
+          "description": "Maximum bytes to read, 1 to 1048576 (default 262144).",
+          "maximum": 1048576,
+          "minimum": 1,
+          "title": "Max Bytes",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "path"
+      ],
+      "title": "read_fileArguments",
+      "type": "object"
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    }
+  },
+  {
+    "name": "write_file",
+    "title": "Write file",
+    "description": "Write a file into the sandbox (for example input data such as CSV, TSV, SMILES, SDF or VCF text), creating\nparent directories. Overwrites an existing file unless append=true.",
+    "inputSchema": {
+      "properties": {
+        "path": {
+          "description": "Path in the sandbox: absolute, or relative to /workspace.",
+          "title": "Path",
+          "type": "string"
+        },
+        "content": {
+          "description": "File content, up to 1048576 characters: text, or base64 with encoding=base64.",
+          "maxLength": 1048576,
+          "title": "Content",
+          "type": "string"
+        },
+        "encoding": {
+          "default": "text",
+          "description": "text (default) or base64.",
+          "enum": [
+            "text",
+            "base64"
+          ],
+          "title": "Encoding",
+          "type": "string"
+        },
+        "append": {
+          "default": false,
+          "description": "Append instead of overwriting.",
+          "title": "Append",
+          "type": "boolean"
+        },
+        "executable": {
+          "default": false,
+          "description": "Make the file executable.",
+          "title": "Executable",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "path",
+        "content"
+      ],
+      "title": "write_fileArguments",
+      "type": "object"
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "idempotentHint": true,
+      "openWorldHint": false
+    }
+  },
+  {
+    "name": "list_files",
+    "title": "List files",
+    "description": "List the files in a sandbox directory with their type and size.",
+    "inputSchema": {
+      "properties": {
+        "path": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Directory (default /workspace).",
+          "title": "Path"
+        },
+        "recursive": {
+          "default": false,
+          "description": "Include subdirectories (at most 5000 entries).",
+          "title": "Recursive",
+          "type": "boolean"
+        }
+      },
+      "title": "list_filesArguments",
+      "type": "object"
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    }
+  }
+]

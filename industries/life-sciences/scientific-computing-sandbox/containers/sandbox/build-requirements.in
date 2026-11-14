@@ -1,0 +1,7 @@
+# Tools used only while building the image (`make lock` writes build-requirements.txt from this file):
+# - uv installs each environment layer from its hashed requirements.txt.
+# - setuptools is the build backend of the few dependencies published only as source distributions (pure Python).
+#   uv receives build-requirements.txt as build constraints, so it hash-checks the backend too.
+# Neither ends up in the sandbox environment or the final image.
+uv==0.11.13
+setuptools==84.2.1

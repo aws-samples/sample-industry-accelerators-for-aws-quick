@@ -1,0 +1,6 @@
+# Requirement overrides for this layer: `make lock` passes this file to `uv pip compile --overrides` for this layer only.
+# Each entry replaces every dependency's declared requirement on that package, so keep it to security fixes.
+# pygpcca 1.0.4 (the latest release, through cellrank) declares jinja2==3.0.3, which has sandbox-breakout CVEs
+# (CVE-2024-56201, CVE-2024-56326, CVE-2025-27516) and xmlattr injection CVEs (CVE-2024-22195, CVE-2024-34064).
+# pygpcca never imports jinja2, so the newer version cannot break it. Remove this once pygpcca relaxes its pin.
+jinja2>=3.1.6

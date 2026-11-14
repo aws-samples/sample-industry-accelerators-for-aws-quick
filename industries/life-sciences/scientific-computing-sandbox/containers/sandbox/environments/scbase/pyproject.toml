@@ -1,0 +1,31 @@
+# Shared layer `scbase`, built on `general`: the single-cell stack that single-cell environments build on. It is not
+# deployed on its own (`deploy = false`). See environments/general/pyproject.toml for how these files are used; run
+# `make lock` after changing dependencies and `npm run environments:catalog` after changing anything.
+[project]
+name = "sandbox-env-scbase"
+version = "0.1.0"
+description = "Single-cell base layer: Scanpy and AnnData with Leiden clustering (leidenalg, python-igraph)."
+license = "MIT-0"
+requires-python = ">=3.13,<3.14"
+dependencies = [
+    "scanpy==1.12.5",
+    # cellrank 2.0.7 (in sctraj) imports anndata._io.specs.methods.H5Group, which anndata 0.13.4 removed. Newer
+    # cellrank releases need pygam, which requires scipy<1.17, below the scipy pin of `general`.
+    "anndata==0.13.2",
+    "leidenalg==0.12.0",
+    "python-igraph==1.0.0",
+]
+
+[tool.uv]
+package = false
+
+[tool.code-sandbox]
+title = "Single-cell base layer"
+parent = "general"
+deploy = false
+
+[tool.code-sandbox.packages]
+scanpy = { import = "scanpy", summary = "Single-cell analysis: QC, normalization, PCA, neighbors, UMAP, clustering, marker genes, plots" }
+anndata = { import = "anndata", summary = "Annotated data matrices and the .h5ad file format" }
+leidenalg = { import = "leidenalg", summary = "Leiden community detection (scanpy.tl.leiden)" }
+python-igraph = { import = "igraph", summary = "Graph library used for Leiden clustering and PAGA" }

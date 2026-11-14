@@ -1,0 +1,307 @@
+/* Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * SPDX-License-Identifier: MIT-0 */
+
+/* AWS Quick look and feel, shared by the widgets: the server inlines it in their pages, at the
+ * QUICK_THEME marker comment.
+ *
+ * The light theme uses the Quick tokens as they are, whatever the host sends. Quick documents no dark values: in a
+ * dark host the surfaces and text follow the MCP Apps host variables, with neutral fallbacks, and purple stays the
+ * accent. The Quick tokens are prefixed `--qs-`: unprefixed, some (`--color-text-secondary`, `--font-sans`...)
+ * are MCP Apps host variable names that the host would override. */
+:root {
+  --qs-color-bg: #faf9fc;
+  --qs-color-bg-secondary: #ffffff;
+  --qs-color-bg-tertiary: #f9fafb;
+  --qs-color-surface: #f9fafb;
+  --qs-color-surface-hover: #f3f4f6;
+  --qs-color-surface-active: #e5e7eb;
+
+  --qs-color-border: rgba(0, 0, 0, 0.12);
+  --qs-color-border-light: rgba(0, 0, 0, 0.06);
+  --qs-color-border-strong: #d1d5db;
+
+  --qs-color-text: #1a1a1a;
+  --qs-color-text-secondary: #5e5e5e;
+  --qs-color-text-muted: #9ca3af;
+  --qs-color-text-on-primary: #ffffff;
+
+  --qs-color-primary: #9333ea;
+  --qs-color-primary-light: #a855f7;
+  --qs-color-primary-bg: #f3e8ff;
+  --qs-color-primary-subtle: rgba(66, 0, 219, 0.12);
+  --qs-color-primary-border: rgba(66, 0, 219, 0.3);
+
+  --qs-color-error: #ef4444;
+  --qs-color-error-dark: #dc2626;
+  --qs-color-error-bg: rgba(239, 68, 68, 0.1);
+  --qs-color-error-border: rgba(239, 68, 68, 0.3);
+
+  --qs-font-sans: "Amazon Ember", "Helvetica Neue", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --qs-font-mono: "SF Mono", "Monaco", "Menlo", "Consolas", monospace;
+  /* Three font sizes */
+  --qs-fs-title: 15px;
+  --qs-fs-body: 13px;
+  --qs-fs-small: 12px;
+
+  --qs-radius-sm: 6px;
+  --qs-radius-md: 10px;
+  --qs-radius-lg: 16px;
+  --qs-radius-pill: 17px;
+  --qs-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --qs-shadow-md: 0 4px 12px rgba(0, 0, 0, 0.08);
+  --qs-transition: 150ms ease;
+  color-scheme: light;
+}
+:root[data-theme="dark"] {
+  --qs-color-bg: var(--color-background-primary, #121214);
+  --qs-color-bg-secondary: var(--color-background-secondary, #1c1c20);
+  --qs-color-bg-tertiary: var(--color-background-tertiary, #232328);
+  --qs-color-surface: var(--color-background-tertiary, #232328);
+  --qs-color-surface-hover: rgba(255, 255, 255, 0.06);
+  --qs-color-surface-active: rgba(255, 255, 255, 0.1);
+  --qs-color-border: rgba(255, 255, 255, 0.14);
+  --qs-color-border-light: rgba(255, 255, 255, 0.08);
+  --qs-color-border-strong: rgba(255, 255, 255, 0.24);
+  --qs-color-text: var(--color-text-primary, #ececf1);
+  --qs-color-text-secondary: var(--color-text-secondary, #a1a1aa);
+  --qs-color-text-muted: #71717a;
+  --qs-color-primary: #a855f7;
+  --qs-color-primary-light: #c084fc;
+  --qs-color-primary-bg: rgba(168, 85, 247, 0.18);
+  --qs-color-primary-subtle: rgba(168, 85, 247, 0.16);
+  --qs-color-primary-border: rgba(168, 85, 247, 0.5);
+  --qs-color-error-dark: #f87171;
+  --qs-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --qs-shadow-md: 0 4px 12px rgba(0, 0, 0, 0.5);
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+  padding: 12px;
+  font: var(--qs-fs-body) / 1.5 var(--qs-font-sans);
+  color: var(--qs-color-text);
+  background: var(--qs-color-bg);
+}
+.mono,
+.stats dd {
+  font-family: var(--qs-font-mono);
+}
+
+/* Card holding the whole widget */
+.card {
+  background: var(--qs-color-bg-secondary);
+  border: 1px solid var(--qs-color-border-light);
+  border-radius: var(--qs-radius-md);
+  box-shadow: var(--qs-shadow-sm);
+  padding: 16px;
+}
+
+/* Title and actions on one row, wrapping on narrow widths */
+header {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+.heading {
+  flex: 1;
+  min-width: 200px;
+}
+h1 {
+  margin: 0;
+  font-size: var(--qs-fs-title);
+  font-weight: 600;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+.secondary {
+  color: var(--qs-color-text-secondary);
+}
+.muted {
+  color: var(--qs-color-text-muted);
+}
+.description {
+  margin: 4px 0 0;
+  color: var(--qs-color-text-secondary);
+  overflow-wrap: anywhere;
+}
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* Key figures under the title: small labels, values in mono */
+.stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 24px;
+  margin: 12px 0 0;
+  font-size: var(--qs-fs-small);
+}
+.stats:empty {
+  display: none;
+}
+.stats div {
+  min-width: 0;
+  max-width: 100%;
+}
+.stats dt {
+  color: var(--qs-color-text-secondary);
+}
+.stats dd {
+  margin: 0;
+  color: var(--qs-color-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Controls */
+button,
+select,
+input {
+  height: 32px;
+  font: inherit;
+  color: var(--qs-color-text);
+  background-color: var(--qs-color-bg-secondary);
+  border: 1px solid var(--qs-color-border);
+  border-radius: var(--qs-radius-sm);
+  transition:
+    background-color var(--qs-transition),
+    border-color var(--qs-transition),
+    box-shadow var(--qs-transition);
+}
+button {
+  padding: 0 12px;
+  cursor: pointer;
+  font-weight: 500;
+}
+button:hover {
+  background-color: var(--qs-color-surface-hover);
+}
+button:active {
+  background-color: var(--qs-color-surface-active);
+}
+.btn-primary {
+  color: var(--qs-color-text-on-primary);
+  background-color: var(--qs-color-primary);
+  border-color: transparent;
+}
+.btn-primary:hover {
+  background-color: var(--qs-color-primary-light);
+}
+.btn-primary:active {
+  background-color: var(--qs-color-primary);
+}
+input {
+  padding: 0 12px;
+}
+input::placeholder {
+  color: var(--qs-color-text-muted);
+}
+select {
+  appearance: none;
+  padding: 0 28px 0 12px;
+  cursor: pointer;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%235e5e5e' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+}
+select:hover,
+input:hover {
+  border-color: var(--qs-color-border-strong);
+}
+input:focus,
+select:focus {
+  outline: none;
+  border-color: var(--qs-color-primary);
+  box-shadow: 0 0 0 3px var(--qs-color-primary-subtle);
+}
+:focus-visible {
+  outline: 2px solid var(--qs-color-primary);
+  outline-offset: 2px;
+}
+input:focus-visible,
+select:focus-visible {
+  outline: none;
+}
+input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  accent-color: var(--qs-color-primary);
+}
+label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--qs-color-text-secondary);
+}
+[disabled],
+label:has(input[disabled]) {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Status messages, the error color only to communicate an error */
+.notice {
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+  padding: 8px 12px;
+  border-radius: var(--qs-radius-sm);
+  font-size: var(--qs-fs-body);
+  text-align: left;
+}
+.notice.error {
+  color: var(--qs-color-text);
+  background: var(--qs-color-error-bg);
+  border: 1px solid var(--qs-color-error-border);
+}
+.notice.error::before {
+  content: "!";
+  flex: none;
+  display: inline-grid;
+  place-items: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  font-size: 11px;
+  font-weight: 700;
+  color: #ffffff;
+  background: var(--qs-color-error-dark);
+}
+
+/* Floating tooltip on a white card */
+.tooltip {
+  position: absolute;
+  z-index: 2;
+  pointer-events: none;
+  padding: 4px 8px;
+  border-radius: var(--qs-radius-sm);
+  font-size: var(--qs-fs-small);
+  white-space: nowrap;
+  color: var(--qs-color-text);
+  background: var(--qs-color-bg-secondary);
+  border: 1px solid var(--qs-color-border-light);
+  box-shadow: var(--qs-shadow-md);
+}
+.tooltip[hidden] {
+  display: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition: none !important;
+    animation: none !important;
+  }
+}

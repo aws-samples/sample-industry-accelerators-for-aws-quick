@@ -1,0 +1,37 @@
+# Sandbox environment `multiomics`, built on `general`. See environments/general/pyproject.toml for how these files
+# are used; run `make lock` after changing dependencies and `npm run environments:catalog` after changing anything.
+[project]
+name = "sandbox-env-multiomics"
+version = "0.1.0"
+description = "Multi-omics integration and pathway analysis: scikit-learn for machine learning, pyComBat (combat) for batch correction, mofapy2 for MOFA+ factor analysis, and GSEApy for GSEA, preranked GSEA, ssGSEA and over-representation analysis against gene sets supplied as files."
+license = "MIT-0"
+requires-python = ">=3.13,<3.14"
+dependencies = [
+    "scikit-learn==1.9.1",
+    "combat==0.3.3",
+    "mofapy2==0.7.5",
+    "gseapy==1.3.2",
+]
+
+[tool.uv]
+package = false
+
+[tool.code-sandbox]
+title = "Multi-omics integration"
+parent = "general"
+use-for = [
+    "Batch correction of expression or omics matrices with ComBat",
+    "Integrating several omics layers into latent factors with MOFA+",
+    "Gene set enrichment (GSEA, prerank, ssGSEA, over-representation with gseapy.enrich) against GMT files or dictionaries",
+    "Clustering, dimensionality reduction and classifiers with scikit-learn",
+]
+notes = [
+    "The sandbox has no internet access, so Enrichr, gseapy.get_library and gene ID mapping services (MyGene.info, biomaRt) are unavailable. Write gene sets to a GMT file and map identifiers before the data reaches the sandbox.",
+    "R and Bioconductor (biomaRt, sva, MOFA2, fgsea) are not installed.",
+]
+
+[tool.code-sandbox.packages]
+scikit-learn = { import = "sklearn", summary = "Machine learning: preprocessing, PCA, clustering, classifiers, cross-validation" }
+combat = { import = "combat", summary = "pyComBat batch effect correction (from combat.pycombat import pycombat)" }
+mofapy2 = { import = "mofapy2", summary = "MOFA+ multi-omics factor analysis (mofapy2.run.entry_point)" }
+gseapy = { import = "gseapy", summary = "GSEA, prerank, ssGSEA and over-representation (enrich) with local gene sets, and enrichment plots" }

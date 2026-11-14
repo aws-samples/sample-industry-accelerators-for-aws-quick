@@ -1,0 +1,38 @@
+# Sandbox environment `chem`, built on `general`. See environments/general/pyproject.toml for how these files are
+# used; run `make lock` after changing dependencies and `npm run environments:catalog` after changing anything.
+[project]
+name = "sandbox-env-chem"
+version = "0.1.0"
+description = "Small-molecule cheminformatics: RDKit for SMILES and SDF parsing, standardization, descriptors, fingerprints and similarity, substructure and SMARTS search, scaffolds, maximum common substructure, 3D conformers and drawing; mmpdb for matched molecular pair analysis."
+license = "MIT-0"
+requires-python = ">=3.13,<3.14"
+dependencies = [
+    "rdkit==2026.9.1",
+    "mmpdb==3.1.6",
+]
+
+[tool.uv]
+package = false
+
+[tool.code-sandbox]
+title = "Cheminformatics"
+parent = "general"
+use-for = [
+    "Parse, validate and standardize SMILES, SDF and MOL files",
+    "Molecular descriptors and drug-likeness rules (molecular weight, logP, TPSA, Lipinski)",
+    "Fingerprints, Tanimoto similarity, clustering and diversity picking of compounds",
+    "Substructure and SMARTS searches, Murcko scaffolds, maximum common substructure",
+    "3D conformer generation and force-field optimization (ETKDG, MMFF, UFF)",
+    "Drawing molecules and grids to PNG or SVG",
+    "Matched molecular pair analysis with mmpdb",
+]
+notes = ["Draw molecules with rdkit.Chem.Draw; no plotting library is installed."]
+
+[tool.code-sandbox.packages]
+rdkit = { import = "rdkit", summary = "Cheminformatics toolkit (rdkit.Chem, AllChem, Descriptors, rdFingerprintGenerator, rdFMCS, Draw)" }
+mmpdb = { import = "mmpdblib", summary = "Matched molecular pair indexing and transforms; use the mmpdb command" }
+
+[[tool.code-sandbox.programs]]
+name = "mmpdb"
+summary = "Fragment, index and query matched molecular pair databases (mmpdb fragment, index, transform)"
+check = ["mmpdb", "--help"]

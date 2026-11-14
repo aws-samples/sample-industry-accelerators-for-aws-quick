@@ -1,0 +1,31 @@
+[project]
+name = "bio-viewers-mcp"
+version = "0.1.0"
+description = "Remote MCP server with MCP Apps viewers for protein 3D structures (Mol*), sequence alignments (AlignmentViewer) and DICOM images, for Amazon Bedrock AgentCore Runtime"
+license = "MIT-0"
+requires-python = ">=3.13"
+dependencies = [
+    "mcp>=2.3.0,<3",
+    "httpx>=0.28.1,<1",
+    "pydicom>=3.0.2,<4",
+]
+
+[project.scripts]
+bio-viewers-mcp = "bio_viewers_mcp.server:main"
+
+[dependency-groups]
+dev = [
+    "pytest>=8.4,<10",
+    "pytest-asyncio>=1.2,<2",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/bio_viewers_mcp"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"

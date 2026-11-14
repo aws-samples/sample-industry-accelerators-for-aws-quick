@@ -1,0 +1,137 @@
+[
+  {
+    "name": "show_structure",
+    "description": "Show a protein 3D structure to the user in an interactive Mol* viewer.\n\n`structure` is either a PDB ID (e.g. \"1CRN\", \"4HHB\"), downloaded from RCSB, or the full text of a structure in\nmmCIF or PDB format (for example a predicted structure). This server cannot read files from the user's computer:\npass the file content itself. Returns a summary of the structure: title, chains, residues and ligands.",
+    "inputSchema": {
+      "properties": {
+        "structure": {
+          "title": "Structure",
+          "type": "string"
+        }
+      },
+      "required": [
+        "structure"
+      ],
+      "title": "show_structureArguments",
+      "type": "object"
+    },
+    "annotations": {
+      "title": "Show protein structure",
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": true
+    }
+  },
+  {
+    "name": "show_alignment",
+    "description": "Show sequences or a multiple sequence alignment to the user in an interactive alignment viewer (based on\nCDCgov AlignmentViewer): residues colored by type, with a consensus, a conservation track and an overview.\n\n`alignment` is the alignment or sequence text: FASTA (aligned or not, A2M), A3M, Clustal or Stockholm. A single\nbare sequence is also accepted. This server cannot read files from the user's computer: pass the file content\nitself. `format` is detected from the content when omitted; set it to \"a3m\" for A3M, whose lower case insertions\notherwise read as FASTA residues. `title` is shown above the alignment. Returns a summary: size, gaps,\nconservation, identity to the consensus.",
+    "inputSchema": {
+      "properties": {
+        "alignment": {
+          "title": "Alignment",
+          "type": "string"
+        },
+        "title": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Title"
+        },
+        "format": {
+          "anyOf": [
+            {
+              "enum": [
+                "fasta",
+                "a3m",
+                "clustal",
+                "stockholm"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Format"
+        }
+      },
+      "required": [
+        "alignment"
+      ],
+      "title": "show_alignmentArguments",
+      "type": "object"
+    },
+    "annotations": {
+      "title": "Show sequence alignment",
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    }
+  },
+  {
+    "name": "show_dicom",
+    "description": "Show a medical image (DICOM) to the user in an interactive viewer: window/level with presets, zoom, pan,\npixel values (Hounsfield units for CT) and scrolling through frames and slices.\n\n`dicom` is the content of a DICOM file encoded in base64 (a `data:` URL prefix is accepted). This server cannot\nread files from the user's computer: pass the file content itself. `sample` shows a bundled anonymized test image\ninstead: \"ct\" (a CT slice) or \"mr\" (an MR slice). Without `dicom` or `sample` the viewer opens empty and the user\ncan open DICOM files (one image, a multi-frame file or a whole series) from their computer: the files stay in the\nuser's browser. Prefer that for patient images. `title` is shown above the image. Returns a technical summary of\nthe header (modality, size, frames, pixel encoding, spacing, window), without patient or study information.",
+    "inputSchema": {
+      "properties": {
+        "dicom": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Dicom"
+        },
+        "sample": {
+          "anyOf": [
+            {
+              "enum": [
+                "ct",
+                "mr"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Sample"
+        },
+        "title": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Title"
+        }
+      },
+      "title": "show_dicomArguments",
+      "type": "object"
+    },
+    "annotations": {
+      "title": "Show DICOM image",
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    }
+  }
+]

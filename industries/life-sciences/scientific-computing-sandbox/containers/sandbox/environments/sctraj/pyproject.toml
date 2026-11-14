@@ -1,0 +1,37 @@
+# Sandbox environment `sctraj`, built on the `scbase` layer. See environments/general/pyproject.toml for how these
+# files are used; run `make lock` after changing dependencies and `npm run environments:catalog` after changing
+# anything.
+[project]
+name = "sandbox-env-sctraj"
+version = "0.1.0"
+description = "Single-cell RNA-seq analysis and trajectories: Scanpy and AnnData (QC, normalization, PCA, neighbors, UMAP, Leiden clustering, marker genes), scVelo for RNA velocity, CellRank for cell fate and trajectory inference, and Squidpy for spatial transcriptomics."
+license = "MIT-0"
+requires-python = ">=3.13,<3.14"
+dependencies = [
+    "scvelo==0.3.4",
+    "cellrank==2.0.7",
+    # 1.8.4 adds centrosome and cp-measure, which publish no linux/arm64 wheels.
+    "squidpy==1.8.3",
+]
+
+[tool.uv]
+package = false
+
+[tool.code-sandbox]
+title = "Single-cell analysis and trajectories"
+parent = "scbase"
+use-for = [
+    "Single-cell QC, normalization, highly variable genes, PCA, neighbors, UMAP and Leiden clustering with Scanpy",
+    "Marker genes and differential expression between clusters",
+    "RNA velocity from spliced and unspliced counts (loom or h5ad) with scVelo",
+    "Cell fate probabilities, terminal states and driver genes with CellRank",
+    "Spatial neighborhood enrichment, co-occurrence and spatial statistics with Squidpy",
+]
+notes = [
+    "The sandbox has no internet access, so the example datasets in scanpy.datasets, scvelo.datasets and squidpy.datasets cannot be downloaded. Write the user's data to the sandbox or simulate data.",
+]
+
+[tool.code-sandbox.packages]
+scvelo = { import = "scvelo", summary = "RNA velocity: moments, stochastic and dynamical models, velocity graphs and plots" }
+cellrank = { import = "cellrank", summary = "Cell fate mapping with kernels (velocity, pseudotime, connectivity) and GPCCA estimators" }
+squidpy = { import = "squidpy", summary = "Spatial omics: spatial graphs, neighborhood enrichment, Moran's I, image features" }

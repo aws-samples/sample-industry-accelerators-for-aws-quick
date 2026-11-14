@@ -1,0 +1,613 @@
+<!doctype html>
+<!-- Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+     SPDX-License-Identifier: MIT-0 -->
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <!-- QUICK_THEME -->
+    <style>
+      :root {
+        --names: 176px;
+      }
+      #overview {
+        display: block;
+        width: 100%;
+        margin-bottom: 12px;
+        border: 1px solid var(--qs-color-border-light);
+        border-radius: var(--qs-radius-sm);
+        cursor: crosshair;
+      }
+      #overview[hidden] {
+        display: none;
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: var(--names) minmax(0, 1fr);
+        border: 1px solid var(--qs-color-border-light);
+        border-radius: var(--qs-radius-md);
+        overflow: hidden;
+        background: var(--qs-color-bg-secondary);
+      }
+      /* Consensus and conservation only mean something for aligned sequences */
+      .grid.unaligned .aligned-only {
+        display: none;
+      }
+      .label {
+        padding: 0 12px;
+        font-size: var(--qs-fs-small);
+        color: var(--qs-color-text-secondary);
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        background: var(--qs-color-bg-tertiary);
+        border-right: 1px solid var(--qs-color-border-light);
+      }
+      .track {
+        display: block;
+        width: 100%;
+      }
+      #ruler {
+        background: var(--qs-color-bg-tertiary);
+      }
+      #names {
+        display: block;
+        border-right: 1px solid var(--qs-color-border-light);
+        border-top: 1px solid var(--qs-color-border-light);
+      }
+      #main {
+        position: relative;
+        border-top: 1px solid var(--qs-color-border-light);
+        min-height: 40px;
+      }
+      #scroll {
+        position: absolute;
+        inset: 0;
+        overflow: auto;
+        cursor: pointer;
+      }
+      #scroll:focus-visible {
+        outline: 2px solid var(--qs-color-primary);
+        outline-offset: -2px;
+      }
+      #cells {
+        position: absolute;
+        left: 0;
+        top: 0;
+        pointer-events: none;
+      }
+      .footer {
+        display: flex;
+        align-items: flex-end;
+        justify-content: space-between;
+        gap: 12px;
+        flex-wrap: wrap;
+      }
+      #hint {
+        margin-top: 12px;
+        font-size: var(--qs-fs-small);
+      }
+      #selection {
+        margin-top: 12px;
+        padding: 8px 12px;
+        border-radius: var(--qs-radius-sm);
+        font-size: var(--qs-fs-small);
+        color: var(--qs-color-text);
+        background: var(--qs-color-primary-bg);
+        border: 1px solid var(--qs-color-primary-border);
+        overflow-wrap: anywhere;
+      }
+      #selection[hidden] {
+        display: none;
+      }
+    </style>
+  </head>
+  <body>
+    <main class="card">
+      <header>
+        <div class="heading">
+          <h1 id="title">Loading sequences</h1>
+          <div class="secondary mono" id="subtitle" style="font-size: var(--qs-fs-small); margin-top: 4px"></div>
+        </div>
+        <div class="actions">
+          <label>Colors
+            <select id="scheme" aria-label="Color scheme">
+              <option value="nucleotide">Nucleotide</option>
+              <option value="taylor">Taylor</option>
+              <option value="clustal">Clustal</option>
+              <option value="zappo">Zappo</option>
+            </select>
+          </label>
+          <label>Zoom
+            <select id="zoom" aria-label="Cell size in pixels">
+              <option value="1">1 px</option>
+              <option value="2">2 px</option>
+              <option value="4">4 px</option>
+              <option value="6">6 px</option>
+              <option value="8">8 px</option>
+              <option value="10">10 px</option>
+              <option value="12">12 px</option>
+              <option value="14">14 px</option>
+              <option value="18">18 px</option>
+            </select>
+          </label>
+          <label><input type="checkbox" id="letters" checked /> Letters</label>
+          <button type="button" id="fullscreen">Full screen</button>
+        </div>
+      </header>
+      <canvas id="overview" height="60" aria-label="Overview of the whole alignment, click to move the view"></canvas>
+      <div class="grid" id="grid">
+        <div class="label">Position</div>
+        <canvas class="track" id="ruler" aria-hidden="true"></canvas>
+        <div class="label aligned-only">Consensus</div>
+        <canvas class="track aligned-only" id="consensus" aria-label="Consensus sequence"></canvas>
+        <div class="label aligned-only">Conservation</div>
+        <canvas class="track aligned-only" id="conservation" aria-label="Conservation of each column"></canvas>
+        <canvas id="names" aria-label="Sequence names"></canvas>
+        <div id="main">
+          <div id="scroll" tabindex="0" aria-label="Alignment, scroll with the arrow keys"><div id="spacer"></div></div>
+          <canvas id="cells" aria-hidden="true"></canvas>
+          <div class="tooltip" id="tip" hidden></div>
+        </div>
+      </div>
+      <div id="selection" role="status" hidden></div>
+      <div class="footer">
+        <dl class="stats" id="stats"></dl>
+        <div class="secondary" id="hint">Hover a residue for details, click it to select its column</div>
+      </div>
+    </main>
+
+    <!-- CDCgov AlignmentViewer (Apache-2.0) draws the residues of the visible window https://github.com/CDCgov/AlignmentViewer -->
+    <script src="https://cdn.jsdelivr.net/npm/alignment-viewer@0.3.4/dist/alignment-viewer.min.js"></script>
+    <script type="module">
+      import {
+        App,
+        applyDocumentTheme,
+        applyHostFonts,
+        applyHostStyleVariables,
+      } from "https://cdn.jsdelivr.net/npm/@modelcontextprotocol/ext-apps@2.0.3/dist/src/app-with-deps.js";
+
+      const $ = (id) => document.getElementById(id);
+      const escapeHtml = (s) =>
+        String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+
+      const app = new App(
+        { name: "Sequence alignment viewer", version: "0.1.0" },
+        { availableDisplayModes: ["inline", "fullscreen"] },
+      );
+      const updateContext = (text) => app.updateModelContext({ content: [{ type: "text", text }] }).catch(() => {});
+
+      // Color schemes of Jalview https://www.jalview.org/help/html/colourSchemes/
+      const group = (map) =>
+        Object.fromEntries(Object.entries(map).flatMap(([residues, color]) => [...residues].map((r) => [r, color])));
+      const SCHEMES = {
+        // AlignmentViewer defaults, the Taylor colors of the nucleotides
+        nucleotide: { A: "#ccff00", C: "#ffff00", G: "#ff9900", T: "#ff6600", U: "#ff6600" },
+        taylor: {
+          A: "#ccff00", R: "#0000ff", N: "#cc00ff", D: "#ff0000", C: "#ffff00", Q: "#ff00cc", E: "#ff0066",
+          G: "#ff9900", H: "#0066ff", I: "#66ff00", L: "#33ff00", K: "#6600ff", M: "#00ff00", F: "#00ff66",
+          P: "#ffcc00", S: "#ff3300", T: "#ff6600", W: "#00ccff", Y: "#00ffcc", V: "#99ff00",
+        },
+        clustal: group({ AILMFWV: "#80a0f0", C: "#f08080", KR: "#f01505", DE: "#c048c0", NQST: "#15c015", G: "#f09048", P: "#c0c000", HY: "#15a4a4" }),
+        zappo: group({ ILVAM: "#ffafaf", FWY: "#ffc800", KRH: "#6464ff", DE: "#ff0000", STNQ: "#00ff00", PG: "#ff00ff", C: "#ffff00" }),
+      };
+
+      /** CSS color of a variable as #rrggbb, a probe resolves `var()` and the canvas converts it */
+      function cssColor(name) {
+        const probe = document.createElement("i");
+        probe.style.color = `var(${name})`;
+        document.body.append(probe);
+        const color = getComputedStyle(probe).color;
+        probe.remove();
+        const ctx = document.createElement("canvas").getContext("2d");
+        ctx.fillStyle = color;
+        return ctx.fillStyle.slice(0, 7);
+      }
+      /** Black or white letters, whichever contrasts most with the cell */
+      const textOn = (hex) => {
+        const [r, g, b] = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255);
+        return 0.299 * r + 0.587 * g + 0.114 * b > 0.5 ? "#000000" : "#ffffff";
+      };
+
+      let entry; // structuredContent of the tool
+      let consensus = ""; // Most common residue of each column
+      let conservation = []; // Its fraction of the sequences
+      let overviewImage = null; // Whole alignment downsampled, drawn once
+      let selected = null; // { row, col } clicked
+      let hoverRow = -1;
+      let generation = 0; // Latest draw, earlier ones still rendering are dropped
+      const dpr = () => window.devicePixelRatio || 1;
+      const cell = () => Number($("zoom").value);
+      const colors = () => ({ ...SCHEMES[$("scheme").value], ambig: cssColor("--qs-color-bg-secondary") });
+      /** Value of a CSS variable, for fonts drawn on canvases */
+      const cssVar = (name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+      const font = (size, family) => `${size}px ${cssVar(family)}`;
+      const showLetters = () => $("letters").checked && cell() >= 8;
+      const trackHeight = () => Math.max(cell(), 12);
+
+      /** Canvas sized in CSS pixels, drawn in device pixels */
+      function sizeCanvas(canvas, w, h) {
+        canvas.style.width = `${w}px`;
+        canvas.style.height = `${h}px`;
+        canvas.width = Math.max(1, Math.round(w * dpr()));
+        canvas.height = Math.max(1, Math.round(h * dpr()));
+        const ctx = canvas.getContext("2d");
+        ctx.setTransform(dpr(), 0, 0, dpr(), 0, 0);
+        return ctx;
+      }
+
+      function computeConsensus() {
+        const n = entry.seqs.length;
+        const out = [];
+        conservation = new Float32Array(entry.length);
+        for (let col = 0; col < entry.length; col++) {
+          const counts = {};
+          let best = "-", max = 0;
+          for (const s of entry.seqs) {
+            const c = s[col];
+            if (!c || c === "-") continue;
+            const k = (counts[c] = (counts[c] ?? 0) + 1);
+            if (k > max) (max = k), (best = c);
+          }
+          out.push(best);
+          conservation[col] = max / n;
+        }
+        consensus = out.join("");
+      }
+
+      /** Visible window of the scroller, in columns and rows, with the offset of the first cell */
+      function windowOf() {
+        const sc = $("scroll"), size = cell();
+        const c0 = Math.floor(sc.scrollLeft / size), r0 = Math.floor(sc.scrollTop / size);
+        return {
+          size, c0, r0,
+          c1: Math.min(entry.length, Math.ceil((sc.scrollLeft + sc.clientWidth) / size) + 1),
+          r1: Math.min(entry.seqs.length, Math.ceil((sc.scrollTop + sc.clientHeight) / size) + 1),
+          dx: sc.scrollLeft - c0 * size, dy: sc.scrollTop - r0 * size,
+          w: sc.clientWidth, h: sc.clientHeight,
+        };
+      }
+
+      /** Residues drawn by AlignmentViewer with cells of whole device pixels: it places cells every `ceil(width)` pixels
+       * but sizes its canvas with `width`, fractional sizes would cut the image. Drawn scaled to CSS pixels */
+      const render = (seqs, width, height) =>
+        alignmentViewer(seqs.map((seq) => ({ seq })), {
+          width: Math.max(1, Math.round(width * dpr())),
+          height: Math.max(1, Math.round(height * dpr())),
+          colors: colors(),
+        });
+      const drawScaled = (ctx, image, x, y, cols, rows, width, height) =>
+        ctx.drawImage(image, x, y, cols * width, rows * height);
+
+      function drawLetters(ctx, rows, win, y0, height, palette) {
+        ctx.font = font(Math.floor(Math.min(win.size, height) * 0.72), "--qs-font-mono");
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        const muted = cssColor("--qs-color-text-muted");
+        rows.forEach((seq, i) => {
+          for (let j = 0; j < seq.length; j++) {
+            const c = seq[j];
+            ctx.fillStyle = palette[c] ? textOn(palette[c]) : muted;
+            ctx.fillText(c, j * win.size - win.dx + win.size / 2, y0 + i * height + height / 2 + 0.5);
+          }
+        });
+      }
+
+      async function draw() {
+        if (!entry) return;
+        const gen = ++generation;
+        const win = windowOf();
+        const palette = colors();
+        const rows = entry.seqs.slice(win.r0, win.r1).map((s) => s.slice(win.c0, win.c1));
+        const consensusRow = consensus.slice(win.c0, win.c1);
+        const th = trackHeight();
+        const [cellsImage, consensusImage] = await Promise.all([
+          render(rows, win.size, win.size),
+          consensusRow ? render([consensusRow], win.size, th) : null,
+        ]);
+        if (gen !== generation) return;
+
+        // Residues
+        const ctx = sizeCanvas($("cells"), win.w, win.h);
+        ctx.fillStyle = palette.ambig;
+        ctx.fillRect(0, 0, win.w, win.h);
+        const longest = rows.reduce((m, s) => Math.max(m, s.length), 0);
+        if (longest) drawScaled(ctx, cellsImage, -win.dx, -win.dy, longest, rows.length, win.size, win.size);
+        if (showLetters()) drawLetters(ctx, rows, win, -win.dy, win.size, palette);
+        // Selected column tinted in purple, the residue clicked outlined
+        if (selected) {
+          const x = (selected.col - win.c0) * win.size - win.dx;
+          const y = (selected.row - win.r0) * win.size - win.dy;
+          ctx.fillStyle = cssColor("--qs-color-primary") + "33";
+          ctx.fillRect(x, 0, win.size, win.h);
+          ctx.strokeStyle = cssColor("--qs-color-primary");
+          ctx.lineWidth = 2;
+          ctx.strokeRect(x + 1, 0, win.size - 2, win.h);
+          ctx.strokeRect(x - 1, y - 1, win.size + 2, win.size + 2);
+        }
+
+        // Consensus and conservation tracks, aligned on the columns
+        const cctx = sizeCanvas($("consensus"), win.w, th);
+        cctx.fillStyle = palette.ambig;
+        cctx.fillRect(0, 0, win.w, th);
+        if (consensusImage) {
+          drawScaled(cctx, consensusImage, -win.dx, 0, consensusRow.length, 1, win.size, th);
+          if (showLetters()) drawLetters(cctx, [consensusRow], { ...win, size: win.size }, 0, th, palette);
+        }
+        const vh = 22;
+        const vctx = sizeCanvas($("conservation"), win.w, vh);
+        const bar = cssColor("--qs-color-text-muted"), active = cssColor("--qs-color-primary");
+        for (let c = win.c0; c < win.c1; c++) {
+          const h = conservation[c] * (vh - 2);
+          vctx.fillStyle = c === selected?.col ? active : bar;
+          vctx.fillRect((c - win.c0) * win.size - win.dx, vh - h, Math.max(1, win.size - (win.size > 3 ? 1 : 0)), h);
+        }
+        drawRuler(win);
+        drawNames(win);
+        drawOverview();
+      }
+
+      function drawRuler(win) {
+        const h = 18;
+        const ctx = sizeCanvas($("ruler"), win.w, h);
+        ctx.fillStyle = cssColor("--qs-color-text-secondary");
+        ctx.strokeStyle = cssColor("--qs-color-border-strong");
+        ctx.font = font(11, "--qs-font-mono");
+        ctx.textAlign = "center";
+        ctx.textBaseline = "top";
+        // Labels at least 56px apart, on 1, 2 or 5 times a power of ten
+        const steps = [1, 2, 5].flatMap((m) => [1, 10, 100, 1000, 10000, 100000].map((p) => m * p)).sort((a, b) => a - b);
+        const step = steps.find((s) => s * win.size >= 56) ?? 1000000;
+        for (let p = Math.max(step, Math.ceil((win.c0 + 1) / step) * step); p <= win.c1; p += step) {
+          const x = (p - 1 - win.c0) * win.size - win.dx + win.size / 2;
+          ctx.fillText(String(p), x, 1);
+          ctx.beginPath();
+          ctx.moveTo(x, 13);
+          ctx.lineTo(x, h);
+          ctx.stroke();
+        }
+      }
+
+      function drawNames(win) {
+        const canvas = $("names");
+        const w = canvas.parentElement.querySelector(".label").offsetWidth;
+        const ctx = sizeCanvas(canvas, w, win.h);
+        ctx.fillStyle = cssColor("--qs-color-bg-tertiary");
+        ctx.fillRect(0, 0, w, win.h);
+        if (win.size < 7) return;
+        ctx.font = font(Math.min(12, Math.floor(win.size * 0.8)), "--qs-font-sans");
+        ctx.textBaseline = "middle";
+        const text = cssColor("--qs-color-text"), primary = cssColor("--qs-color-primary");
+        for (let r = win.r0; r < win.r1; r++) {
+          const y = (r - win.r0) * win.size - win.dy;
+          const isSelected = r === selected?.row;
+          if (isSelected || r === hoverRow) {
+            ctx.fillStyle = cssColor(isSelected ? "--qs-color-primary-bg" : "--qs-color-surface-active");
+            ctx.fillRect(0, y, w, win.size);
+          }
+          ctx.fillStyle = isSelected ? primary : text;
+          let name = entry.ids[r];
+          while (name.length > 1 && ctx.measureText(name).width > w - 24) name = name.slice(0, -2) + "…";
+          ctx.fillText(name, 12, y + win.size / 2 + 0.5);
+        }
+      }
+
+      /** Whole alignment at a glance: rows and columns sampled to the pixels of the overview, drawn by AlignmentViewer */
+      async function renderOverview() {
+        const canvas = $("overview");
+        const fits = entry.length * cell() <= $("scroll").clientWidth && entry.seqs.length * cell() <= $("scroll").clientHeight;
+        canvas.hidden = fits;
+        overviewImage = null;
+        if (fits) return;
+        const w = canvas.clientWidth || 600;
+        const h = Math.min(80, Math.max(24, entry.seqs.length * 2));
+        canvas.dataset.h = h;
+        const nr = Math.min(entry.seqs.length, Math.round(h * dpr()));
+        const nc = Math.min(entry.length, Math.round(w * dpr()));
+        const rows = [];
+        for (let i = 0; i < nr; i++) {
+          const s = entry.seqs[Math.floor((i * entry.seqs.length) / nr)];
+          let out = "";
+          for (let j = 0; j < nc; j++) out += s[Math.floor((j * entry.length) / nc)] ?? "-";
+          rows.push(out);
+        }
+        // One device pixel per sampled cell, scaled to the overview when drawn
+        overviewImage = await render(rows, 1 / dpr(), 1 / dpr());
+        drawOverview();
+      }
+
+      function drawOverview() {
+        const canvas = $("overview");
+        if (canvas.hidden || !overviewImage) return;
+        const w = canvas.clientWidth, h = Number(canvas.dataset.h);
+        const ctx = sizeCanvas(canvas, w, h);
+        canvas.style.width = "100%";
+        ctx.drawImage(overviewImage, 0, 0, w, h);
+        // Rectangle of the visible window
+        const sc = $("scroll");
+        const fw = entry.length * cell(), fh = entry.seqs.length * cell();
+        const box = [
+          (sc.scrollLeft / fw) * w + 1, (sc.scrollTop / fh) * h + 1,
+          Math.max(4, (sc.clientWidth / fw) * w - 2), Math.max(4, (sc.clientHeight / fh) * h - 2),
+        ];
+        ctx.fillStyle = cssColor("--qs-color-primary") + "26";
+        ctx.fillRect(...box);
+        // Purple outline with a white inner line, visible over any residue color
+        ctx.strokeStyle = "#ffffff";
+        ctx.lineWidth = 1;
+        ctx.strokeRect(box[0] + 1.5, box[1] + 1.5, box[2] - 3, box[3] - 3);
+        ctx.strokeStyle = cssColor("--qs-color-primary");
+        ctx.lineWidth = 2;
+        ctx.strokeRect(...box);
+      }
+
+      function moveOverview(e) {
+        const rect = $("overview").getBoundingClientRect();
+        const sc = $("scroll");
+        sc.scrollLeft = ((e.clientX - rect.left) / rect.width) * entry.length * cell() - sc.clientWidth / 2;
+        sc.scrollTop = ((e.clientY - rect.top) / rect.height) * entry.seqs.length * cell() - sc.clientHeight / 2;
+      }
+      $("overview").addEventListener("pointerdown", (e) => {
+        if (!entry) return;
+        $("overview").setPointerCapture(e.pointerId);
+        moveOverview(e);
+      });
+      $("overview").addEventListener("pointermove", (e) => e.buttons && entry && moveOverview(e));
+
+      /** Size of the scroll area: rows up to 340px inline, the rest of the window in full screen */
+      function layout() {
+        if (!entry) return;
+        const size = cell();
+        $("spacer").style.width = `${entry.length * size}px`;
+        $("spacer").style.height = `${entry.seqs.length * size}px`;
+        const main = $("main");
+        const scrollbar = 16;
+        const full = document.documentElement.dataset.mode === "fullscreen";
+        const height = full
+          ? window.innerHeight - main.getBoundingClientRect().top - 120
+          : Math.min(340, entry.seqs.length * size + scrollbar);
+        main.style.height = `${Math.max(40, height)}px`;
+        $("letters").disabled = size < 8;
+        void renderOverview().then(draw);
+      }
+
+      // Cell under the pointer, the tooltip and the column clicked
+      function cellAt(e) {
+        const sc = $("scroll");
+        const rect = sc.getBoundingClientRect();
+        const x = e.clientX - rect.left, y = e.clientY - rect.top;
+        if (x > sc.clientWidth || y > sc.clientHeight) return null;
+        const col = Math.floor((x + sc.scrollLeft) / cell()), row = Math.floor((y + sc.scrollTop) / cell());
+        if (row >= entry.seqs.length || col >= entry.length) return null;
+        return { row, col, x, y };
+      }
+      const residueNumber = (seq, col) => (seq[col] && seq[col] !== "-" ? seq.slice(0, col + 1).replace(/-/g, "").length : null);
+      function describe({ row, col }) {
+        const seq = entry.seqs[row], c = seq[col] ?? "-";
+        const n = residueNumber(seq, col);
+        return { seq, c, n, name: entry.ids[row] };
+      }
+      $("scroll").addEventListener("mousemove", (e) => {
+        if (!entry) return;
+        const at = cellAt(e);
+        const tip = $("tip");
+        if (!at) return (tip.hidden = true);
+        const { c, n } = describe(at);
+        const name = entry.ids[at.row].length > 40 ? entry.ids[at.row].slice(0, 39) + "…" : entry.ids[at.row];
+        const figures = `column ${at.col + 1} · ${c === "-" ? "gap" : `${c}${n}`}` +
+          (entry.aligned ? ` · ${Math.round(conservation[at.col] * 100)}% conserved` : "");
+        tip.innerHTML = `${escapeHtml(name)} <span class="mono secondary">${escapeHtml(figures)}</span>`;
+        tip.hidden = false;
+        const left = Math.min(at.x + 12, $("main").clientWidth - tip.offsetWidth - 4);
+        tip.style.left = `${Math.max(0, left)}px`;
+        tip.style.top = `${at.y + 16 > $("main").clientHeight - 32 ? at.y - 36 : at.y + 16}px`;
+        if (hoverRow !== at.row) (hoverRow = at.row), drawNames(windowOf());
+      });
+      $("scroll").addEventListener("mouseleave", () => {
+        $("tip").hidden = true;
+        hoverRow = -1;
+        if (entry) drawNames(windowOf());
+      });
+      $("scroll").addEventListener("click", (e) => {
+        if (!entry) return;
+        const at = cellAt(e);
+        if (!at) return;
+        selected = selected?.row === at.row && selected?.col === at.col ? null : { row: at.row, col: at.col };
+        void draw();
+        if (!selected) return ($("selection").hidden = true);
+        const { c, n, name } = describe(at);
+        const counts = {};
+        for (const s of entry.seqs) counts[s[at.col] ?? "-"] = (counts[s[at.col] ?? "-"] ?? 0) + 1;
+        const composition = Object.entries(counts).sort((a, b) => b[1] - a[1]).map(([k, v]) => `${k === "-" ? "gap" : k} ${v}`).join(", ");
+        $("selection").innerHTML = `<strong>Column ${at.col + 1}</strong> <span class="mono">${escapeHtml(composition)}</span>`;
+        $("selection").hidden = false;
+        void updateContext(
+          `The user selected column ${at.col + 1} of the ${entry.aligned ? "alignment" : "sequences"} "${entry.title}": ` +
+            `${name} has ${c === "-" ? "a gap" : `${c} (residue ${n} of the sequence)`}; ` +
+            (entry.aligned ? `consensus ${consensus[at.col]}, conservation ${Math.round(conservation[at.col] * 100)}%; ` : "") +
+            `column composition: ${composition}`,
+        );
+      });
+      let pending = false;
+      $("scroll").addEventListener("scroll", () => {
+        if (pending) return;
+        pending = true;
+        requestAnimationFrame(() => ((pending = false), void draw()));
+      });
+      new ResizeObserver(() => entry && layout()).observe($("grid"));
+
+      /** Zoom keeping the column at the left edge */
+      $("zoom").onchange = () => {
+        const sc = $("scroll");
+        const col = sc.scrollLeft / Number($("zoom").dataset.prev || cell()), row = sc.scrollTop / Number($("zoom").dataset.prev || cell());
+        $("zoom").dataset.prev = cell();
+        layout();
+        sc.scrollLeft = col * cell();
+        sc.scrollTop = row * cell();
+      };
+      $("scheme").onchange = () => layout();
+      $("letters").onchange = () => void draw();
+
+      function show(data) {
+        entry = data;
+        selected = null;
+        $("title").textContent = entry.title;
+        $("grid").classList.toggle("unaligned", !entry.aligned);
+        $("subtitle").textContent = entry.subtitle ?? "";
+        $("scheme").value = entry.alphabet === "nucleotide" ? "nucleotide" : "taylor";
+        // Readable letters for small alignments, the big picture for large ones
+        const cells = entry.seqs.length * entry.length;
+        $("zoom").value = cells > 2_000_000 ? "2" : cells > 200_000 ? "6" : "14";
+        $("zoom").dataset.prev = $("zoom").value;
+        $("selection").hidden = true;
+        $("stats").innerHTML = (entry.stats ?? [])
+          .map((s) => `<div><dt>${escapeHtml(s.label)}</dt><dd>${escapeHtml(s.value)}</dd></div>`)
+          .join("");
+        computeConsensus();
+        $("scroll").scrollTo(0, 0);
+        layout();
+      }
+
+      // Theme and display mode of the host as attributes on <html> for the CSS
+      function onContext(ctx) {
+        if (ctx.styles?.variables) applyHostStyleVariables(ctx.styles.variables);
+        if (ctx.styles?.css?.fonts) applyHostFonts(ctx.styles.css.fonts);
+        if (ctx.theme) applyDocumentTheme(ctx.theme);
+        if (ctx.displayMode) {
+          document.documentElement.dataset.mode = ctx.displayMode;
+          $("fullscreen").textContent = ctx.displayMode === "fullscreen" ? "Exit full screen" : "Full screen";
+        }
+        if (entry) layout();
+      }
+      app.onhostcontextchanged = onContext;
+      $("fullscreen").onclick = async () => {
+        const mode = document.documentElement.dataset.mode === "fullscreen" ? "inline" : "fullscreen";
+        onContext({ displayMode: (await app.requestDisplayMode({ mode })).mode });
+      };
+
+      // Tool arguments, to call the tool again when the result has no `structuredContent`, as some hosts give to
+      // widgets restored after a reload of the chat https://github.com/modelcontextprotocol/ext-apps/issues/696
+      let toolArgs;
+      // Name of the tool as the host knows it: behind an AgentCore Gateway it is prefixed with the target name
+      // (`<target>___show_alignment`), the host context gives the name of the tool that opened the widget
+      const toolName = (fallback) => app.getHostContext()?.toolInfo?.tool?.name ?? fallback;
+      app.ontoolinput = (params) => (toolArgs = params.arguments);
+      app.ontoolresult = async (result) => {
+        if (!result.structuredContent && !result.isError && toolArgs) {
+          result = await app.callServerTool({ name: toolName("show_alignment"), arguments: toolArgs }).catch(() => result);
+        }
+        if (!result.structuredContent) {
+          $("title").textContent = "No sequences";
+          const text = result.content?.find((c) => c.type === "text")?.text;
+          $("selection").outerHTML = `<div class="notice error" role="alert" style="margin-top: 12px">${escapeHtml(text ?? "The tool returned no sequences")}</div>`;
+          return;
+        }
+        show(result.structuredContent);
+      };
+
+      await app.connect();
+      const host = app.getHostContext() ?? {};
+      $("fullscreen").hidden = Boolean(host.availableDisplayModes && !host.availableDisplayModes.includes("fullscreen"));
+      onContext(host);
+    </script>
+  </body>
+</html>

@@ -1,0 +1,910 @@
+<!doctype html>
+<!-- Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+     SPDX-License-Identifier: MIT-0 -->
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <!-- QUICK_THEME -->
+    <style>
+      /* Medical images are read on black, the rest of the widget keeps the Quick palette */
+      #viewer {
+        position: relative;
+        height: 460px;
+        border: 1px solid var(--qs-color-border-light);
+        border-radius: var(--qs-radius-md);
+        overflow: hidden;
+        background: #000000;
+        touch-action: none;
+        cursor: crosshair;
+        transition: border-color var(--qs-transition), box-shadow var(--qs-transition);
+      }
+      :root[data-mode="fullscreen"] #viewer {
+        height: calc(100vh - 240px);
+      }
+      #viewer[data-tool="pan"] {
+        cursor: grab;
+      }
+      #viewer[data-tool="zoom"] {
+        cursor: zoom-in;
+      }
+      #viewer:focus-visible {
+        outline: none;
+        border-color: var(--qs-color-primary);
+        box-shadow: 0 0 0 3px var(--qs-color-primary-subtle);
+      }
+      #viewer.dropping {
+        border-color: var(--qs-color-primary);
+        box-shadow: 0 0 0 3px var(--qs-color-primary-subtle);
+      }
+      #canvas {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+      }
+      /* Corner annotations, technical only: never patient or study information */
+      .corner {
+        position: absolute;
+        z-index: 1;
+        max-width: 48%;
+        padding: 8px 12px;
+        font-family: var(--qs-font-mono);
+        font-size: var(--qs-fs-small);
+        line-height: 1.4;
+        color: #e4e4e7;
+        text-shadow: 0 0 3px #000000, 0 0 1px #000000;
+        pointer-events: none;
+        white-space: pre;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .corner.tl { top: 0; left: 0; }
+      .corner.tr { top: 0; right: 0; text-align: right; }
+      .corner.bl { bottom: 0; left: 0; }
+      .corner.br { bottom: 0; right: 0; text-align: right; }
+      #status {
+        position: absolute;
+        inset: 0;
+        z-index: 2;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        align-items: center;
+        justify-content: center;
+        padding: 16px;
+        text-align: center;
+        color: #d4d4d8;
+        pointer-events: none;
+      }
+      #status:empty {
+        display: none;
+      }
+      #status button,
+      #status .notice {
+        pointer-events: auto;
+      }
+      #status .notice.error {
+        max-width: 520px;
+        background: var(--qs-color-bg-secondary);
+      }
+      .slices {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-top: 12px;
+      }
+      .slices[hidden] {
+        display: none;
+      }
+      .slices input[type="range"] {
+        flex: 1;
+        height: 16px;
+        padding: 0;
+        border: 0;
+        background: transparent;
+        accent-color: var(--qs-color-primary);
+        box-shadow: none;
+      }
+      .slices span {
+        min-width: 72px;
+        text-align: right;
+        font-size: var(--qs-fs-small);
+      }
+      .footer {
+        display: flex;
+        align-items: flex-end;
+        justify-content: space-between;
+        gap: 12px;
+        flex-wrap: wrap;
+      }
+      #hint {
+        margin-top: 12px;
+        font-size: var(--qs-fs-small);
+      }
+      #file,
+      label[hidden] {
+        display: none;
+      }
+    </style>
+  </head>
+  <body>
+    <main class="card" id="card">
+      <header>
+        <div class="heading">
+          <h1 id="title">Loading image</h1>
+          <div class="secondary mono" id="subtitle" style="font-size: var(--qs-fs-small); margin-top: 4px"></div>
+        </div>
+        <div class="actions">
+          <label id="series-label" hidden>Series
+            <select id="series" aria-label="Series"></select>
+          </label>
+          <label>Window
+            <select id="preset" aria-label="Window preset"></select>
+          </label>
+          <label>Mouse
+            <select id="tool" aria-label="Mouse drag tool">
+              <option value="window">Window</option>
+              <option value="pan">Pan</option>
+              <option value="zoom">Zoom</option>
+            </select>
+          </label>
+          <label><input type="checkbox" id="invert" /> Invert</label>
+          <button type="button" id="reset">Reset</button>
+          <button type="button" id="open">Open files</button>
+          <input type="file" id="file" multiple aria-label="DICOM files" />
+          <button type="button" id="fullscreen">Full screen</button>
+        </div>
+      </header>
+      <div id="viewer" tabindex="0" aria-label="DICOM image, arrow keys change the slice, plus and minus zoom">
+        <canvas id="canvas" aria-hidden="true"></canvas>
+        <div class="corner tl" id="tl"></div>
+        <div class="corner tr" id="tr"></div>
+        <div class="corner bl" id="bl"></div>
+        <div class="corner br" id="br"></div>
+        <div class="tooltip" id="tip" hidden></div>
+        <div id="status">Loading the image</div>
+      </div>
+      <div class="slices" id="slices" hidden>
+        <input type="range" id="slice" min="0" max="0" value="0" aria-label="Slice" />
+        <span class="mono secondary" id="slice-label"></span>
+      </div>
+      <div class="footer">
+        <dl class="stats" id="stats"></dl>
+        <div class="secondary" id="hint">Drag: window · Right-drag: pan · Scroll: slices · Ctrl+scroll: zoom</div>
+      </div>
+    </main>
+
+    <!-- dicom-parser (MIT) reads the DICOM elements https://github.com/cornerstonejs/dicomParser -->
+    <script src="https://cdn.jsdelivr.net/npm/dicom-parser@1.8.21/dist/dicomParser.min.js"></script>
+    <script type="module">
+      import {
+        App,
+        applyDocumentTheme,
+        applyHostFonts,
+        applyHostStyleVariables,
+      } from "https://cdn.jsdelivr.net/npm/@modelcontextprotocol/ext-apps@2.0.3/dist/src/app-with-deps.js";
+
+      const $ = (id) => document.getElementById(id);
+      const escapeHtml = (s) =>
+        String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+      const setStatus = (html) => ($("status").innerHTML = html);
+      const showError = (text) => setStatus(`<div class="notice error" role="alert">${escapeHtml(text)}</div>`);
+      const showEmpty = () =>
+        setStatus(
+          `<div>Open DICOM files from your computer, or drop them here.<br />The files stay in your browser.</div>` +
+            `<button type="button" class="btn-primary" id="open-empty">Open files</button>`,
+        );
+
+      const app = new App(
+        { name: "DICOM image viewer", version: "0.1.0" },
+        { availableDisplayModes: ["inline", "fullscreen"] },
+      );
+      const updateContext = (text) => app.updateModelContext({ content: [{ type: "text", text }] }).catch(() => {});
+
+      // ---------------------------------------------------------------------------------------------------------------
+      // Reading DICOM files: technical attributes only, patient and study attributes are never read
+
+      const TS = {
+        "1.2.840.10008.1.2": "Implicit VR Little Endian",
+        "1.2.840.10008.1.2.1": "Explicit VR Little Endian",
+        "1.2.840.10008.1.2.2": "Explicit VR Big Endian",
+        "1.2.840.10008.1.2.1.99": "Deflated Explicit VR Little Endian",
+        "1.2.840.10008.1.2.5": "RLE Lossless",
+        "1.2.840.10008.1.2.4.50": "JPEG Baseline",
+        "1.2.840.10008.1.2.4.51": "JPEG Extended",
+        "1.2.840.10008.1.2.4.57": "JPEG Lossless",
+        "1.2.840.10008.1.2.4.70": "JPEG Lossless SV1",
+        "1.2.840.10008.1.2.4.80": "JPEG-LS Lossless",
+        "1.2.840.10008.1.2.4.81": "JPEG-LS Near-lossless",
+        "1.2.840.10008.1.2.4.90": "JPEG 2000 Lossless",
+        "1.2.840.10008.1.2.4.91": "JPEG 2000",
+        "1.2.840.10008.1.2.4.201": "HTJ2K Lossless",
+        "1.2.840.10008.1.2.4.203": "HTJ2K",
+      };
+      const NATIVE = new Set(["1.2.840.10008.1.2", "1.2.840.10008.1.2.1", "1.2.840.10008.1.2.2"]);
+      const JPEG = new Set(["1.2.840.10008.1.2.4.50", "1.2.840.10008.1.2.4.51"]);
+      const RLE = "1.2.840.10008.1.2.5";
+      const IMPLICIT_LE = "1.2.840.10008.1.2";
+      // Window presets of CT, in Hounsfield units
+      const CT_PRESETS = [
+        ["soft", "Soft tissue", 40, 400],
+        ["lung", "Lung", -600, 1500],
+        ["bone", "Bone", 400, 1800],
+        ["brain", "Brain", 40, 80],
+      ];
+
+      class Unsupported extends Error {}
+
+      function parse(bytes) {
+        try {
+          return dicomParser.parseDicom(bytes);
+        } catch (first) {
+          if (/deflate|pako|inflater/i.test(String(first?.exception ?? first?.message ?? first))) {
+            throw new Unsupported("Deflated DICOM files are not supported, convert the file to uncompressed");
+          }
+          // Files without the Part 10 preamble and file meta information, read as implicit VR little endian
+          try {
+            return dicomParser.parseDicom(bytes, { TransferSyntaxUID: IMPLICIT_LE });
+          } catch {
+            throw new Error("not a DICOM file");
+          }
+        }
+      }
+
+      /** Image attributes of a parsed file, and a decoder of its frames */
+      function readImage(bytes, name) {
+        const ds = parse(bytes);
+        const pixel = ds.elements.x7fe00010;
+        const rows = ds.uint16("x00280010"), cols = ds.uint16("x00280011");
+        if (!pixel || !rows || !cols) throw new Error("no image in the file");
+        const num = (tag, i = 0) => {
+          const v = ds.floatString(tag, i);
+          return Number.isFinite(v) ? v : undefined;
+        };
+        const position = [0, 1, 2].map((i) => num("x00200032", i));
+        const orientation = [0, 1, 2, 3, 4, 5].map((i) => num("x00200037", i));
+        return {
+          name,
+          ds,
+          rows,
+          cols,
+          ts: ds.string("x00020010")?.trim() || IMPLICIT_LE,
+          modality: ds.string("x00080060")?.trim() || "",
+          bodyPart: ds.string("x00180015")?.trim() || "",
+          series: ds.string("x0020000e")?.trim() || "",
+          seriesNumber: ds.intString("x00200011"),
+          instance: ds.intString("x00200013"),
+          frames: Math.max(1, ds.intString("x00280008") || 1),
+          spp: ds.uint16("x00280002") || 1,
+          photometric: ds.string("x00280004")?.trim() || "MONOCHROME2",
+          bitsAllocated: ds.uint16("x00280100") || 16,
+          bitsStored: ds.uint16("x00280101") || ds.uint16("x00280100") || 16,
+          signed: ds.uint16("x00280103") === 1,
+          planar: ds.uint16("x00280006") || 0,
+          slope: num("x00281053") ?? 1,
+          intercept: num("x00281052") ?? 0,
+          rescaleType: ds.string("x00281054")?.trim() || "",
+          window: num("x00281050") !== undefined && num("x00281051") ? { center: num("x00281050"), width: num("x00281051") } : null,
+          spacing: num("x00280030") && num("x00280030", 1) ? [num("x00280030"), num("x00280030", 1)] : null,
+          thickness: num("x00180050"),
+          position: position.every((v) => v !== undefined) ? position : null,
+          orientation: orientation.every((v) => v !== undefined) ? orientation : null,
+        };
+      }
+
+      /** Bytes of an encapsulated (compressed) frame */
+      function encapsulatedFrame(img, frame) {
+        const { ds } = img;
+        const el = ds.elements.x7fe00010;
+        if (el.basicOffsetTable?.length) return dicomParser.readEncapsulatedImageFrame(ds, el, frame);
+        if (img.frames === 1) return dicomParser.readEncapsulatedPixelDataFromFragments(ds, el, 0, el.fragments.length);
+        if (el.fragments.length === img.frames) return dicomParser.readEncapsulatedPixelDataFromFragments(ds, el, frame);
+        if (JPEG.has(img.ts)) return dicomParser.readEncapsulatedImageFrame(ds, el, frame, dicomParser.createJPEGBasicOffsetTable(ds, el));
+        throw new Unsupported("Cannot find the frames of this compressed file");
+      }
+
+      /** RLE Lossless frame to native little endian bytes, samples interleaved (DICOM PS3.5 Annex G) */
+      function decodeRle(data, img) {
+        const view = new DataView(data.buffer, data.byteOffset, data.byteLength);
+        const bps = img.bitsAllocated / 8, segments = view.getUint32(0, true);
+        if (segments !== img.spp * bps) throw new Error("invalid RLE data");
+        const pixels = img.rows * img.cols, stride = img.spp * bps;
+        const out = new Uint8Array(pixels * stride);
+        for (let s = 0; s < segments; s++) {
+          const end = s + 1 < segments ? view.getUint32(8 + 4 * s, true) : data.length;
+          // Segments go from the most significant byte of each sample, stored little endian
+          const base = Math.floor(s / bps) * bps + (bps - 1 - (s % bps));
+          let i = view.getUint32(4 + 4 * s, true), p = 0;
+          while (i < end && p < pixels) {
+            const n = (data[i++] << 24) >> 24;
+            if (n >= 0) for (let k = 0; k <= n && p < pixels; k++) out[p++ * stride + base] = data[i++];
+            else if (n !== -128) {
+              const b = data[i++];
+              for (let k = 0; k < 1 - n && p < pixels; k++) out[p++ * stride + base] = b;
+            }
+          }
+        }
+        return out;
+      }
+
+      /** Stored values of native bytes, masked to the bits stored and sign extended */
+      function storedValues(bytes, img) {
+        const { bitsAllocated: bits, bitsStored: stored, signed } = img;
+        if (img.ts === "1.2.840.10008.1.2.2" && bits > 8) {
+          const step = bits / 8;
+          for (let i = 0; i < bytes.length; i += step) bytes.subarray(i, i + step).reverse();
+        }
+        const raw = bits === 8 ? bytes : bits === 16 ? new Uint16Array(bytes.buffer, 0, bytes.length / 2) : bits === 32 ? new Uint32Array(bytes.buffer, 0, bytes.length / 4) : null;
+        if (!raw) throw new Unsupported(`${bits}-bit pixels are not supported`);
+        if (stored >= 32 && !signed) return raw;
+        const shift = 32 - stored, mask = 2 ** stored - 1;
+        const out = new Int32Array(raw.length);
+        for (let i = 0; i < raw.length; i++) out[i] = signed ? (raw[i] << shift) >> shift : raw[i] & mask;
+        return out;
+      }
+
+      /** Modality values of a grayscale frame (slope and intercept applied) and their range */
+      function grayFrame(values, img) {
+        const out = new Float32Array(img.rows * img.cols);
+        let min = Infinity, max = -Infinity;
+        for (let i = 0; i < out.length; i++) {
+          const v = values[i] * img.slope + img.intercept;
+          out[i] = v;
+          if (v < min) min = v;
+          if (v > max) max = v;
+        }
+        return { kind: "gray", values: out, min, max };
+      }
+
+      /** RGBA of an 8-bit color frame, interleaved or planar, RGB or YBR_FULL */
+      function colorFrame(values, img, planar) {
+        const n = img.rows * img.cols, rgba = new Uint8ClampedArray(n * 4);
+        const ybr = img.photometric === "YBR_FULL";
+        for (let p = 0; p < n; p++) {
+          let [a, b, c] = planar ? [values[p], values[p + n], values[p + 2 * n]] : [values[3 * p], values[3 * p + 1], values[3 * p + 2]];
+          if (ybr) [a, b, c] = [a + 1.402 * (c - 128), a - 0.344136 * (b - 128) - 0.714136 * (c - 128), a + 1.772 * (b - 128)];
+          const o = p * 4;
+          rgba[o] = a;
+          rgba[o + 1] = b;
+          rgba[o + 2] = c;
+          rgba[o + 3] = 255;
+        }
+        return { kind: "rgb", rgba };
+      }
+
+      async function decodeJpeg(data, img) {
+        if (img.bitsAllocated !== 8) throw new Unsupported("JPEG images with more than 8 bits are not supported");
+        const bitmap = await createImageBitmap(new Blob([data], { type: "image/jpeg" }), {
+          colorSpaceConversion: "none",
+          premultiplyAlpha: "none",
+        });
+        const canvas = new OffscreenCanvas(img.cols, img.rows);
+        const ctx = canvas.getContext("2d", { willReadFrequently: true });
+        ctx.drawImage(bitmap, 0, 0);
+        bitmap.close();
+        const { data: rgba } = ctx.getImageData(0, 0, img.cols, img.rows);
+        if (img.spp === 3) return { kind: "rgb", rgba };
+        const gray = new Uint8Array(img.rows * img.cols);
+        for (let i = 0; i < gray.length; i++) gray[i] = rgba[i * 4];
+        return grayFrame(gray, img);
+      }
+
+      async function decodeFrame(img, frame) {
+        const color = img.spp === 3;
+        if (!color && !img.photometric.startsWith("MONOCHROME")) {
+          throw new Unsupported(`${img.photometric} images are not supported`);
+        }
+        if (JPEG.has(img.ts)) return decodeJpeg(encapsulatedFrame(img, frame), img);
+        if (color && (img.bitsAllocated !== 8 || !["RGB", "YBR_FULL"].includes(img.photometric))) {
+          throw new Unsupported(`${img.bitsAllocated}-bit ${img.photometric} images are not supported`);
+        }
+        let bytes, planar = img.planar;
+        if (img.ts === RLE) {
+          bytes = decodeRle(encapsulatedFrame(img, frame), img);
+          planar = 0;
+        } else if (NATIVE.has(img.ts)) {
+          const el = img.ds.elements.x7fe00010;
+          const size = img.rows * img.cols * img.spp * (img.bitsAllocated / 8);
+          const start = el.dataOffset + frame * size;
+          if (start + size > img.ds.byteArray.length) throw new Error("the pixel data is truncated");
+          bytes = img.ds.byteArray.slice(start, start + size);
+        } else {
+          throw new Unsupported(
+            `${TS[img.ts] ?? `Transfer syntax ${img.ts}`} is not supported: the viewer shows uncompressed, RLE and 8-bit JPEG images`,
+          );
+        }
+        const values = storedValues(bytes, img);
+        return color ? colorFrame(values, img, planar) : grayFrame(values, img);
+      }
+
+      // ---------------------------------------------------------------------------------------------------------------
+      // Series: the images of the files, grouped by series and sorted along the slice direction
+
+      function sortKey(img) {
+        if (img.position && img.orientation) {
+          const [a, b, c, d, e, f] = img.orientation;
+          const normal = [b * f - c * e, c * d - a * f, a * e - b * d];
+          return normal[0] * img.position[0] + normal[1] * img.position[1] + normal[2] * img.position[2];
+        }
+        return img.instance ?? 0;
+      }
+
+      function buildSeries(images) {
+        const groups = new Map();
+        for (const img of images) {
+          const key = img.series || "default";
+          if (!groups.has(key)) groups.set(key, []);
+          groups.get(key).push(img);
+        }
+        return [...groups.values()].map((imgs) => {
+          imgs.sort((a, b) => sortKey(a) - sortKey(b) || (a.instance ?? 0) - (b.instance ?? 0));
+          const slices = imgs.flatMap((img) => Array.from({ length: img.frames }, (_, frame) => ({ img, frame })));
+          return { images: imgs, slices, first: imgs[0] };
+        });
+      }
+
+      const plural = (n, word) => `${n.toLocaleString()} ${word}${n === 1 ? "" : "s"}`;
+      const seriesLabel = (s, i) =>
+        `${s.first.seriesNumber !== undefined ? `Series ${s.first.seriesNumber}` : `Series ${i + 1}`} · ` +
+        `${s.first.modality || "?"} · ${plural(s.slices.length, "image")}`;
+
+      /** Technical description of a series for the model, never patient or study attributes */
+      function describeSeries(s) {
+        const img = s.first;
+        return [
+          img.modality || "unknown modality",
+          img.bodyPart && `body part ${img.bodyPart}`,
+          `${img.cols} × ${img.rows} pixels`,
+          plural(s.slices.length, "image"),
+          `${img.bitsStored}-bit ${img.photometric}`,
+          img.spacing && `pixel spacing ${img.spacing[0]} × ${img.spacing[1]} mm`,
+          img.thickness !== undefined && `slice thickness ${img.thickness} mm`,
+        ]
+          .filter(Boolean)
+          .join(", ");
+      }
+
+      // ---------------------------------------------------------------------------------------------------------------
+      // View state and drawing
+
+      let series = []; // Series of the files shown
+      let current = null; // Series shown
+      let index = 0; // Slice shown
+      let frame = null; // Decoded slice
+      let win = null; // { center, width } of the grayscale window
+      let view = { scale: 1, x: 0, y: 0 }; // Image pixels to CSS pixels, offset of the image center
+      let generation = 0;
+      const cache = new Map(); // Decoded slices, the latest ones
+      const CACHE_SIZE = 96;
+      const imageCanvas = document.createElement("canvas"); // The slice windowed, in image pixels
+      const dpr = () => window.devicePixelRatio || 1;
+      const isCT = () => current?.first.modality === "CT";
+      const units = () => (current?.first.rescaleType || (isCT() ? "HU" : ""));
+      // Rows are stretched when the pixels are not square
+      const aspect = () => (current?.first.spacing ? current.first.spacing[0] / current.first.spacing[1] : 1);
+
+      async function sliceAt(i) {
+        const { img, frame: f } = current.slices[i];
+        const key = `${img.name}#${f}`;
+        if (cache.has(key)) return cache.get(key);
+        const decoded = await decodeFrame(img, f);
+        cache.set(key, decoded);
+        if (cache.size > CACHE_SIZE) cache.delete(cache.keys().next().value);
+        return decoded;
+      }
+
+      /** Window of the file, else the range of the slice */
+      function defaultWindow() {
+        const w = current.first.window;
+        if (w) return { ...w };
+        return fullRange();
+      }
+      const fullRange = () => ({
+        center: (frame.min + frame.max) / 2,
+        width: Math.max(1, frame.max - frame.min),
+      });
+
+      function fit() {
+        const box = $("viewer").getBoundingClientRect();
+        const { rows, cols } = current.first;
+        view = { scale: Math.min(box.width / cols, box.height / (rows * aspect())) * 0.96, x: 0, y: 0 };
+      }
+
+      /** Slice windowed into the image canvas, DICOM PS3.3 C.11.2.1.2 linear function */
+      function renderImage() {
+        const { rows, cols } = current.slices[index].img;
+        imageCanvas.width = cols;
+        imageCanvas.height = rows;
+        const ctx = imageCanvas.getContext("2d");
+        if (frame.kind === "rgb") {
+          const rgba = $("invert").checked ? frame.rgba.map((v, i) => (i % 4 === 3 ? v : 255 - v)) : frame.rgba;
+          ctx.putImageData(new ImageData(rgba, cols, rows), 0, 0);
+          return;
+        }
+        const image = ctx.createImageData(cols, rows);
+        const out = image.data, values = frame.values;
+        const low = win.center - 0.5 - (win.width - 1) / 2, range = Math.max(1, win.width - 1);
+        const invert = (current.slices[index].img.photometric === "MONOCHROME1") !== $("invert").checked;
+        for (let i = 0; i < values.length; i++) {
+          let g = ((values[i] - low) / range) * 255;
+          g = g < 0 ? 0 : g > 255 ? 255 : g;
+          if (invert) g = 255 - g;
+          const o = i * 4;
+          out[o] = out[o + 1] = out[o + 2] = g;
+          out[o + 3] = 255;
+        }
+        ctx.putImageData(image, 0, 0);
+      }
+
+      /** Image canvas onto the viewport with the zoom and pan, and the corner annotations */
+      function paint() {
+        const canvas = $("canvas");
+        const box = $("viewer").getBoundingClientRect();
+        canvas.width = Math.max(1, Math.round(box.width * dpr()));
+        canvas.height = Math.max(1, Math.round(box.height * dpr()));
+        const ctx = canvas.getContext("2d");
+        ctx.setTransform(dpr(), 0, 0, dpr(), 0, 0);
+        ctx.fillStyle = "#000000";
+        ctx.fillRect(0, 0, box.width, box.height);
+        if (!current || !frame) return;
+        const w = imageCanvas.width * view.scale, h = imageCanvas.height * view.scale * aspect();
+        ctx.imageSmoothingEnabled = view.scale < 4;
+        ctx.imageSmoothingQuality = "high";
+        ctx.drawImage(imageCanvas, box.width / 2 + view.x - w / 2, box.height / 2 + view.y - h / 2, w, h);
+        const img = current.slices[index].img;
+        const n = current.slices.length;
+        $("tl").textContent = n > 1 ? `Image ${index + 1} / ${n}` + (img.frames > 1 ? `\nFrame ${current.slices[index].frame + 1}` : "") : "";
+        $("tr").textContent = [img.modality, `${img.cols} × ${img.rows}`].filter(Boolean).join("\n");
+        $("bl").textContent = frame.kind === "gray" ? `W ${Math.round(win.width)}  L ${Math.round(win.center)}` : "";
+        $("br").textContent = `Zoom ${Math.round(view.scale * 100)}%`;
+      }
+
+      /** Show slice i: decoded (cached), windowed, painted */
+      async function showSlice(i) {
+        if (!current) return;
+        index = Math.max(0, Math.min(current.slices.length - 1, i));
+        $("slice").value = index;
+        $("slice-label").textContent = `${index + 1} / ${current.slices.length}`;
+        const gen = ++generation;
+        try {
+          const decoded = await sliceAt(index);
+          if (gen !== generation) return;
+          frame = decoded;
+          if (!win && frame.kind === "gray") {
+            win = defaultWindow();
+            syncPreset();
+          }
+          setStatus("");
+          renderImage();
+          paint();
+        } catch (err) {
+          if (gen !== generation) return;
+          frame = null;
+          paint();
+          showError(err instanceof Unsupported ? err.message : `Could not decode this image: ${err?.message ?? err}`);
+        }
+      }
+
+      // ---------------------------------------------------------------------------------------------------------------
+      // Window presets
+
+      function fillPresets() {
+        // "default" is the window of the file, or the full range when the file has none
+        const options = current?.first.window ? [["default", "From the file"], ["full", "Full range"]] : [["default", "Full range"]];
+        if (isCT()) options.push(...CT_PRESETS.map(([id, label, c, w]) => [id, `${label} (${c}/${w})`]));
+        options.push(["custom", "Custom"]);
+        $("preset").innerHTML = options.map(([id, label]) => `<option value="${id}">${escapeHtml(label)}</option>`).join("");
+        $("preset").querySelector('[value="custom"]').hidden = true;
+        $("preset").value = "default";
+      }
+      function syncPreset() {
+        const d = current.first.window;
+        const match = (c, w) => Math.abs(win.center - c) < 0.5 && Math.abs(win.width - w) < 0.5;
+        const preset = d && match(d.center, d.width) ? "default"
+          : CT_PRESETS.find(([, , c, w]) => isCT() && match(c, w))?.[0]
+            ?? (frame && match(fullRange().center, fullRange().width) ? (d ? "full" : "default") : "custom");
+        $("preset").value = preset;
+      }
+      $("preset").onchange = () => {
+        if (!frame || frame.kind !== "gray") return;
+        const id = $("preset").value;
+        const ct = CT_PRESETS.find(([p]) => p === id);
+        win = ct ? { center: ct[2], width: ct[3] } : id === "full" ? fullRange() : id === "default" ? defaultWindow() : win;
+        renderImage();
+        paint();
+      };
+
+      // ---------------------------------------------------------------------------------------------------------------
+      // Pointer, wheel and keyboard
+
+      const toolOf = (e) => (e.button === 1 || e.button === 2 || e.shiftKey ? "pan" : e.ctrlKey || e.metaKey ? "zoom" : $("tool").value);
+      let drag = null;
+      $("viewer").addEventListener("contextmenu", (e) => e.preventDefault());
+      $("viewer").addEventListener("pointerdown", (e) => {
+        if (!frame || e.target.closest("#status button, #status .notice")) return;
+        $("viewer").focus({ preventScroll: true });
+        $("viewer").setPointerCapture(e.pointerId);
+        drag = { tool: toolOf(e), x: e.clientX, y: e.clientY };
+        $("tip").hidden = true;
+      });
+      $("viewer").addEventListener("pointermove", (e) => {
+        if (!frame) return;
+        if (!drag) return hover(e);
+        const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
+        drag.x = e.clientX;
+        drag.y = e.clientY;
+        if (drag.tool === "window" && frame.kind === "gray") {
+          // Left/right: width, up/down: level, a full drag across covers the range of the slice
+          const step = Math.max(frame.max - frame.min, 1) / $("viewer").clientWidth;
+          win = { center: win.center + dy * step, width: Math.max(1, win.width + dx * step) };
+          syncPreset();
+          renderImage();
+        } else if (drag.tool === "pan" || drag.tool === "window") {
+          view.x += dx;
+          view.y += dy;
+        } else {
+          zoomBy(Math.exp(-dy / 150));
+        }
+        paint();
+      });
+      const endDrag = () => (drag = null);
+      $("viewer").addEventListener("pointerup", endDrag);
+      $("viewer").addEventListener("pointercancel", endDrag);
+      $("viewer").addEventListener("pointerleave", () => ($("tip").hidden = true));
+
+      function zoomBy(factor, at) {
+        const box = $("viewer").getBoundingClientRect();
+        const scale = Math.max(0.05, Math.min(64, view.scale * factor));
+        // Zoom about the pointer: the image point under it stays there
+        if (at) {
+          const px = at.clientX - box.left - box.width / 2, py = at.clientY - box.top - box.height / 2;
+          view.x = px - ((px - view.x) * scale) / view.scale;
+          view.y = py - ((py - view.y) * scale) / view.scale;
+        }
+        view.scale = scale;
+      }
+
+      /** Pixel under the pointer and its value */
+      function hover(e) {
+        const box = $("viewer").getBoundingClientRect();
+        const img = current.slices[index].img;
+        const sx = e.clientX - box.left, sy = e.clientY - box.top;
+        const x = Math.floor((sx - box.width / 2 - view.x) / view.scale + img.cols / 2);
+        const y = Math.floor((sy - box.height / 2 - view.y) / (view.scale * aspect()) + img.rows / 2);
+        const tip = $("tip");
+        if (x < 0 || y < 0 || x >= img.cols || y >= img.rows) return (tip.hidden = true);
+        const i = y * img.cols + x;
+        const value = frame.kind === "gray"
+          ? `${Number(frame.values[i].toFixed(2)).toLocaleString()}${units() ? ` ${units()}` : ""}`
+          : `RGB ${frame.rgba[i * 4]}, ${frame.rgba[i * 4 + 1]}, ${frame.rgba[i * 4 + 2]}`;
+        tip.innerHTML = `<span class="mono">${escapeHtml(value)}</span> <span class="mono secondary">x ${x} · y ${y}</span>`;
+        tip.hidden = false;
+        tip.style.left = `${Math.max(0, Math.min(sx + 12, box.width - tip.offsetWidth - 4))}px`;
+        tip.style.top = `${sy + 16 > box.height - 32 ? sy - 36 : sy + 16}px`;
+      }
+
+      $("viewer").addEventListener(
+        "wheel",
+        (e) => {
+          if (!frame) return;
+          // Single images leave the wheel to the chat, except to zoom
+          if (e.ctrlKey || e.metaKey) {
+            e.preventDefault();
+            zoomBy(Math.exp(-e.deltaY / 200), e);
+            paint();
+          } else if (current.slices.length > 1) {
+            e.preventDefault();
+            wheel += e.deltaY;
+            const steps = Math.trunc(wheel / 40);
+            if (steps) {
+              wheel -= steps * 40;
+              void showSlice(index + steps);
+            }
+          }
+        },
+        { passive: false },
+      );
+      let wheel = 0;
+
+      $("viewer").addEventListener("keydown", (e) => {
+        if (!current) return;
+        const step = { ArrowDown: 1, ArrowRight: 1, PageDown: 10, ArrowUp: -1, ArrowLeft: -1, PageUp: -10 }[e.key];
+        if (step) {
+          e.preventDefault();
+          void showSlice(index + step);
+        } else if (e.key === "Home" || e.key === "End") {
+          e.preventDefault();
+          void showSlice(e.key === "Home" ? 0 : current.slices.length - 1);
+        } else if (e.key === "+" || e.key === "=" || e.key === "-") {
+          e.preventDefault();
+          zoomBy(e.key === "-" ? 1 / 1.25 : 1.25);
+          paint();
+        }
+      });
+      $("slice").oninput = () => void showSlice(Number($("slice").value));
+      $("tool").onchange = () => ($("viewer").dataset.tool = $("tool").value);
+      $("invert").onchange = () => frame && (renderImage(), paint());
+      $("reset").onclick = () => {
+        if (!current) return;
+        fit();
+        $("invert").checked = false;
+        if (frame?.kind === "gray") win = defaultWindow();
+        fillPresets();
+        if (frame) renderImage(), paint();
+      };
+
+      // ---------------------------------------------------------------------------------------------------------------
+      // Showing files: from the tool result or opened by the user
+
+      function renderStats() {
+        const img = current.first;
+        const stats = [
+          ["Modality", img.modality || "—"],
+          img.bodyPart && ["Body part", img.bodyPart],
+          ["Size", `${img.cols} × ${img.rows}`],
+          ["Images", current.slices.length.toLocaleString()],
+          ["Pixels", `${img.bitsStored}-bit ${img.signed ? "signed " : ""}${img.photometric}`],
+          img.spacing && ["Pixel spacing", `${img.spacing[0]} × ${img.spacing[1]} mm`],
+          img.thickness !== undefined && ["Slice thickness", `${img.thickness} mm`],
+          ["Transfer syntax", TS[img.ts] ?? img.ts],
+        ].filter(Boolean);
+        $("stats").innerHTML = stats
+          .map(([label, value]) => `<div><dt>${escapeHtml(label)}</dt><dd title="${escapeHtml(value)}">${escapeHtml(value)}</dd></div>`)
+          .join("");
+      }
+
+      /** Image controls only work with an image shown */
+      function enableControls(on) {
+        for (const id of ["preset", "tool", "invert", "reset"]) $(id).disabled = !on;
+        if (!on) $("preset").innerHTML = "<option>Full range</option>";
+      }
+
+      function selectSeries(i) {
+        current = series[i];
+        cache.clear();
+        frame = null;
+        win = null;
+        $("series").value = i;
+        const n = current.slices.length;
+        $("slices").hidden = n < 2;
+        $("slice").max = n - 1;
+        enableControls(true);
+        fillPresets();
+        $("preset").disabled = current.first.spp === 3;
+        renderStats();
+        fit();
+        // Middle slice of a stack, as most viewers open them
+        void showSlice(n > 2 ? Math.floor(n / 2) : 0);
+      }
+      $("series").onchange = () => selectSeries(Number($("series").value));
+
+      /** Parse the files, skipping the ones that are not DICOM images, and show their series */
+      async function showFiles(files, { title, subtitle } = {}) {
+        setStatus("Reading the files");
+        const images = [], skipped = [];
+        let unsupported = null;
+        for (const file of files) {
+          try {
+            images.push(readImage(file.bytes, file.name));
+          } catch (err) {
+            skipped.push(file.name);
+            if (err instanceof Unsupported) unsupported = err.message;
+          }
+        }
+        if (!images.length) {
+          series = [];
+          current = null;
+          frame = null;
+          paint();
+          enableControls(false);
+          $("series-label").hidden = true;
+          $("slices").hidden = true;
+          $("stats").innerHTML = "";
+          $("title").textContent = title ?? "No DICOM image";
+          showError(unsupported ?? (files.length === 1 ? "The file is not a DICOM image" : "None of the files is a DICOM image"));
+          return null;
+        }
+        series = buildSeries(images);
+        $("series").innerHTML = series.map((s, i) => `<option value="${i}">${escapeHtml(seriesLabel(s, i))}</option>`).join("");
+        $("series-label").hidden = series.length < 2;
+        const one = series.length === 1 && series[0].slices.length === 1;
+        $("title").textContent = title ?? (one ? `${series[0].first.modality || "DICOM"} image` : `${plural(images.length, "DICOM file")}`);
+        $("subtitle").textContent = (subtitle ?? "") + (skipped.length ? `${subtitle ? " · " : ""}${plural(skipped.length, "file")} skipped, not DICOM images` : "");
+        selectSeries(0);
+        return { images, skipped };
+      }
+
+      const base64Bytes = (b64) => Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
+
+      async function openLocal(fileList) {
+        const list = [...fileList];
+        if (!list.length) return;
+        const files = await Promise.all(list.map(async (f) => ({ name: f.name, bytes: new Uint8Array(await f.arrayBuffer()) })));
+        const shown = await showFiles(files, { subtitle: "Opened from your computer" });
+        if (!shown) return;
+        // Technical details only: the files stay in the browser
+        void updateContext(
+          `The user opened ${plural(list.length, "file")} from their computer in the DICOM viewer (they stay in the ` +
+            `browser and were not sent to the server)` +
+            (shown.skipped.length ? `, ${shown.skipped.length} of them not DICOM images` : "") +
+            `: ${series.map((s, i) => `${seriesLabel(s, i)}: ${describeSeries(s)}`).join("; ")}`,
+        );
+      }
+      const pick = () => $("file").click();
+      $("open").onclick = pick;
+      $("status").addEventListener("click", (e) => e.target.id === "open-empty" && pick());
+      $("file").onchange = () => {
+        void openLocal($("file").files);
+        $("file").value = "";
+      };
+      for (const type of ["dragenter", "dragover"]) {
+        $("card").addEventListener(type, (e) => {
+          if (![...(e.dataTransfer?.types ?? [])].includes("Files")) return;
+          e.preventDefault();
+          $("viewer").classList.add("dropping");
+        });
+      }
+      $("card").addEventListener("dragleave", (e) => !$("card").contains(e.relatedTarget) && $("viewer").classList.remove("dropping"));
+      $("card").addEventListener("drop", (e) => {
+        e.preventDefault();
+        $("viewer").classList.remove("dropping");
+        void openLocal(e.dataTransfer.files);
+      });
+
+      new ResizeObserver(() => current && frame && paint()).observe($("viewer"));
+
+      // Theme and display mode of the host as attributes on <html> for the CSS
+      function onContext(ctx) {
+        if (ctx.styles?.variables) applyHostStyleVariables(ctx.styles.variables);
+        if (ctx.styles?.css?.fonts) applyHostFonts(ctx.styles.css.fonts);
+        if (ctx.theme) applyDocumentTheme(ctx.theme);
+        if (ctx.displayMode) {
+          document.documentElement.dataset.mode = ctx.displayMode;
+          $("fullscreen").textContent = ctx.displayMode === "fullscreen" ? "Exit full screen" : "Full screen";
+          if (current) requestAnimationFrame(() => (fit(), paint()));
+        }
+      }
+      app.onhostcontextchanged = onContext;
+      $("fullscreen").onclick = async () => {
+        const mode = document.documentElement.dataset.mode === "fullscreen" ? "inline" : "fullscreen";
+        onContext({ displayMode: (await app.requestDisplayMode({ mode })).mode });
+      };
+
+      // Tool arguments, to call the tool again when the result has no `structuredContent`, as some hosts give to
+      // widgets restored after a reload of the chat https://github.com/modelcontextprotocol/ext-apps/issues/696
+      let toolArgs;
+      // Name of the tool as the host knows it: behind an AgentCore Gateway it is prefixed with the target name
+      // (`<target>___show_dicom`), the host context gives the name of the tool that opened the widget
+      const toolName = (fallback) => app.getHostContext()?.toolInfo?.tool?.name ?? fallback;
+      app.ontoolinput = (params) => (toolArgs = params.arguments);
+      app.ontoolresult = async (result) => {
+        if (!result.structuredContent && !result.isError && toolArgs) {
+          result = await app.callServerTool({ name: toolName("show_dicom"), arguments: toolArgs }).catch(() => result);
+        }
+        const entry = result.structuredContent;
+        if (!entry) {
+          $("title").textContent = "No image";
+          return showError(result.content?.find((c) => c.type === "text")?.text ?? "The tool returned no image");
+        }
+        $("title").textContent = entry.title;
+        $("subtitle").textContent = entry.subtitle ?? "";
+        if (!entry.files?.length) return showEmpty();
+        let files;
+        try {
+          files = entry.files.map((f) => ({ name: f.name, bytes: base64Bytes(f.data) }));
+        } catch {
+          return showError("The image sent by the tool is not valid base64");
+        }
+        await showFiles(files, { title: entry.title, subtitle: entry.subtitle ?? "" });
+      };
+
+      paint();
+      enableControls(false);
+      await app.connect();
+      // Full screen button only when the host offers it
+      const host = app.getHostContext() ?? {};
+      $("fullscreen").hidden = Boolean(host.availableDisplayModes && !host.availableDisplayModes.includes("fullscreen"));
+      onContext(host);
+    </script>
+  </body>
+</html>

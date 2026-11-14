@@ -1,0 +1,39 @@
+{
+  "name": "ls-scientific-computing-sandbox",
+  "version": "1.0.0",
+  "description": "AWS Quick accelerator: per-user, network-isolated scientific Python sandboxes on Amazon Bedrock AgentCore Runtime behind an AgentCore Gateway",
+  "license": "MIT-0",
+  "private": true,
+  "scripts": {
+    "build": "tsc --noEmit",
+    "test": "jest",
+    "test:integration": "jest --config jest.integration.config.js",
+    "cdk": "cdk",
+    "tools:snapshot": "cd containers/sandbox && uv run --frozen python scripts/tools_snapshot.py > ../../lib/tools/server-tools.json",
+    "environments:catalog": "cd containers/sandbox && uv run --frozen python scripts/sandbox_environments.py catalog"
+  },
+  "dependencies": {
+    "@aws-sdk/client-bedrock-agentcore": "^3.1161.0",
+    "aws-cdk-lib": "^2.275.0",
+    "aws-jwt-verify": "^5.2.1",
+    "cdk-nag": "^2.38.2",
+    "constructs": "^10.8.1"
+  },
+  "devDependencies": {
+    "@aws-sdk/client-cloudformation": "^3.1144.0",
+    "@aws-sdk/client-lambda": "^3.1161.0",
+    "@types/aws-lambda": "^8.10.164",
+    "@types/jest": "^30.0.0",
+    "@types/node": "^26.6.3",
+    "aws-cdk": "^2.1147.0",
+    "esbuild": "^0.28.2",
+    "jest": "^30.0.0",
+    "ts-jest": "^29.4.15",
+    "ts-node": "^10.9.2",
+    "typescript": "~5.9"
+  },
+  "overrides": {
+    "glob": "^14.0.6",
+    "minimatch": "^11.0.8"
+  }
+}

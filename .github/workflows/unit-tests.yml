@@ -1,0 +1,61 @@
+# Runs `make test-unit` for each accelerator that a pull request or push changes, and for every accelerator once a
+# week, so that breakage from new dependency releases and base images shows up even when the code hasn't changed.
+name: Unit tests
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  schedule:
+    - cron: '17 6 * * 1' # Mondays 06:17 UTC
+  workflow_dispatch: # tests every accelerator
+
+permissions:
+  contents: read
+
+jobs:
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      accelerators: ${{ steps.list.outputs.accelerators }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - id: list
+        env:
+          EVENT: ${{ github.event_name }}
+          BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: |
+          all=$(make --no-print-directory list)
+          if [ "$EVENT" = workflow_dispatch ] || [ "$EVENT" = schedule ] || ! git cat-file -e "${BASE}^{commit}" 2>/dev/null; then
+            selected="$all"
+          else
+            changed=$(git diff --name-only "$BASE" HEAD)
+            selected=$(for dir in $all; do
+              if printf '%s\n' "$changed" | grep -q "^${dir}/"; then echo "$dir"; fi
+            done)
+          fi
+          echo "accelerators=$(printf '%s\n' $selected | jq -R . | jq -cs 'map(select(. != ""))')" >> "$GITHUB_OUTPUT"
+
+  test-unit:
+    needs: changes
+    if: needs.changes.outputs.accelerators != '[]'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        accelerator: ${{ fromJson(needs.changes.outputs.accelerators) }}
+    defaults:
+      run:
+        working-directory: ${{ matrix.accelerator }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: ${{ matrix.accelerator }}/package-lock.json
+      - uses: astral-sh/setup-uv@v6
+      - run: npm ci
+      - run: make test-unit

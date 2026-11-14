@@ -1,0 +1,360 @@
+<!doctype html>
+<!-- Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+     SPDX-License-Identifier: MIT-0 -->
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/molstar@5.13.1/build/viewer/molstar.css" />
+    <!-- QUICK_THEME -->
+    <style>
+      .pdb-form {
+        display: flex;
+        gap: 8px;
+      }
+      .pdb-form input {
+        width: 104px;
+        font-family: var(--qs-font-mono);
+        text-transform: uppercase;
+      }
+      .pdb-form input::placeholder {
+        font-family: var(--qs-font-sans);
+        text-transform: none;
+      }
+      #viewer {
+        position: relative;
+        height: 460px;
+        border: 1px solid var(--qs-color-border-light);
+        border-radius: var(--qs-radius-md);
+        overflow: hidden;
+        background: var(--qs-color-bg-secondary);
+      }
+      :root[data-mode="fullscreen"] #viewer {
+        height: calc(100vh - 200px);
+      }
+      #molstar {
+        position: absolute;
+        inset: 0;
+      }
+      #status {
+        position: absolute;
+        inset: 0;
+        z-index: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 16px;
+        color: var(--qs-color-text-secondary);
+        pointer-events: none;
+      }
+      #status:empty {
+        display: none;
+      }
+
+      /* Mol* in the Quick palette: white canvas, light borders, neutral icons turning purple, no beige panels */
+      #viewer .msp-plugin,
+      #viewer .msp-plugin .msp-layout-standard {
+        border: 0;
+        background: var(--qs-color-bg-secondary);
+        font-family: var(--qs-font-sans);
+      }
+      #viewer .msp-plugin .msp-layout-top,
+      #viewer .msp-plugin .msp-sequence-select,
+      #viewer .msp-plugin .msp-sequence-select > select {
+        color: var(--qs-color-text-secondary);
+        background-color: var(--qs-color-bg-tertiary);
+      }
+      #viewer .msp-plugin .msp-layout-top {
+        border-bottom: 1px solid var(--qs-color-border-light);
+      }
+      #viewer .msp-plugin .msp-sequence-wrapper {
+        font-family: var(--qs-font-mono);
+        color: var(--qs-color-text);
+      }
+      #viewer .msp-viewport-controls {
+        top: 12px;
+        right: 12px;
+      }
+      #viewer .msp-viewport-controls-buttons > div {
+        margin-bottom: 8px;
+        border-radius: var(--qs-radius-sm);
+        box-shadow: var(--qs-shadow-sm);
+      }
+      #viewer .msp-plugin .msp-viewport-controls-buttons .msp-btn-icon {
+        height: 32px;
+        color: var(--qs-color-text-secondary) !important;
+        background: var(--qs-color-bg-secondary) !important;
+        border: 1px solid var(--qs-color-border);
+        border-radius: var(--qs-radius-sm);
+        transition:
+          color var(--qs-transition),
+          background-color var(--qs-transition);
+      }
+      #viewer .msp-plugin .msp-viewport-controls-buttons .msp-btn-icon:hover {
+        color: var(--qs-color-primary) !important;
+        background: var(--qs-color-primary-bg) !important;
+        border: 1px solid var(--qs-color-primary-border);
+        outline: none !important;
+      }
+      #viewer .msp-plugin .msp-viewport-controls-buttons .msp-btn-link-toggle-on {
+        color: var(--qs-color-primary) !important;
+        background: var(--qs-color-primary-bg) !important;
+        border-color: var(--qs-color-primary-border);
+      }
+      /* Mol* draws a beige translucent backdrop behind its buttons */
+      #viewer .msp-plugin .msp-viewport-controls .msp-semi-transparent-background {
+        display: none;
+      }
+      /* Menu opened by hovering a button (Reset Zoom, Orient Axes...) */
+      #viewer .msp-plugin .msp-hover-box-wrapper .msp-hover-box-body {
+        right: 40px;
+        width: 128px;
+        padding: 4px;
+        background: var(--qs-color-bg-secondary);
+        border: 1px solid var(--qs-color-border-light);
+        border-radius: var(--qs-radius-md);
+        box-shadow: var(--qs-shadow-md);
+      }
+      #viewer .msp-plugin .msp-hover-box-wrapper .msp-hover-box-spacer {
+        right: 32px;
+        width: 8px;
+      }
+      #viewer .msp-plugin .msp-hover-box-body .msp-flex-row {
+        background: transparent;
+      }
+      #viewer .msp-plugin .msp-hover-box-body .msp-btn {
+        padding: 0 12px;
+        text-align: left;
+        color: var(--qs-color-text);
+        background: transparent !important;
+        border-radius: var(--qs-radius-sm);
+        font-size: var(--qs-fs-body);
+      }
+      #viewer .msp-plugin .msp-hover-box-body .msp-btn:hover {
+        color: var(--qs-color-primary);
+        background: var(--qs-color-surface-hover) !important;
+        outline: none !important;
+      }
+      #viewer .msp-viewport-controls-panel {
+        right: 40px;
+        background: var(--qs-color-bg-secondary);
+        border: 1px solid var(--qs-color-border-light);
+        border-radius: var(--qs-radius-md);
+        box-shadow: var(--qs-shadow-md);
+        overflow: hidden;
+      }
+      #viewer .msp-plugin .msp-highlight-info,
+      #viewer .msp-plugin .msp-highlight-toast-wrapper {
+        color: var(--qs-color-text);
+        background: var(--qs-color-bg-secondary);
+        border-radius: var(--qs-radius-sm);
+        box-shadow: var(--qs-shadow-md);
+        font-family: var(--qs-font-mono);
+        font-size: var(--qs-fs-small);
+      }
+    </style>
+  </head>
+  <body>
+    <main class="card">
+      <header>
+        <div class="heading">
+          <h1 id="title">Loading structure</h1>
+          <p class="description" id="description" hidden></p>
+          <div class="secondary mono" id="subtitle" style="font-size: var(--qs-fs-small); margin-top: 4px"></div>
+        </div>
+        <div class="actions">
+          <form class="pdb-form" id="pdb-form">
+            <input id="pdb-id" placeholder="PDB ID" maxlength="4" aria-label="PDB ID" pattern="[0-9][A-Za-z0-9]{3}" />
+            <button type="submit" class="btn-primary">Load</button>
+          </form>
+          <button type="button" id="fullscreen">Full screen</button>
+        </div>
+      </header>
+      <div id="viewer">
+        <div id="molstar"></div>
+        <div id="status">Loading the 3D viewer</div>
+      </div>
+      <dl class="stats" id="stats"></dl>
+    </main>
+
+    <script>
+      // Mol* bundles an Emscripten module that builds named functions with `new Function` when loaded, blocked by the
+      // host CSP (no 'unsafe-eval'). This pattern is built without eval while the script loads, as in sparql-llm
+      const NativeFunction = Function;
+      const namedFunction =
+        /^return function ([\w$]+)\(\) \{\s*"use strict";\s*return body\.apply\(this, arguments\);\s*\};?\s*$/;
+      window.Function = function (...args) {
+        const name = args.length === 2 && args[0] === "body" && namedFunction.exec(args[1])?.[1];
+        if (!name) return NativeFunction(...args);
+        return (body) =>
+          Object.defineProperty(
+            function () {
+              return body.apply(this, arguments);
+            },
+            "name",
+            { value: name },
+          );
+      };
+      window.Function.prototype = NativeFunction.prototype;
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/molstar@5.13.1/build/viewer/molstar.js"></script>
+    <script type="module">
+      import {
+        App,
+        applyDocumentTheme,
+        applyHostFonts,
+        applyHostStyleVariables,
+      } from "https://cdn.jsdelivr.net/npm/@modelcontextprotocol/ext-apps@2.0.3/dist/src/app-with-deps.js";
+
+      window.Function = NativeFunction;
+      const $ = (id) => document.getElementById(id);
+      const escapeHtml = (s) =>
+        String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+      const setStatus = (html) => ($("status").innerHTML = html);
+      const showError = (text) => setStatus(`<div class="notice error" role="alert">${escapeHtml(text)}</div>`);
+
+      // Connection to the host with the MCP Apps SDK
+      const app = new App(
+        { name: "Protein structure viewer", version: "0.1.0" },
+        { availableDisplayModes: ["inline", "fullscreen"] },
+      );
+      const updateContext = (text) => app.updateModelContext({ content: [{ type: "text", text }] }).catch(() => {});
+
+      /** CSS color of a variable as a 0xRRGGBB number for Mol*, a probe resolves `var()` and the canvas converts it */
+      function cssColor(name) {
+        const probe = document.createElement("i");
+        probe.style.color = `var(${name})`;
+        document.body.append(probe);
+        const color = getComputedStyle(probe).color;
+        probe.remove();
+        const ctx = document.createElement("canvas").getContext("2d");
+        ctx.fillStyle = color;
+        return parseInt(ctx.fillStyle.replace("#", "").slice(0, 6), 16) || 0xffffff;
+      }
+      const canvasColor = () => cssColor("--qs-color-bg-secondary");
+
+      let viewerPromise;
+      function getViewer() {
+        viewerPromise ??= molstar.Viewer.create($("molstar"), {
+          layoutIsExpanded: false,
+          layoutShowControls: false,
+          layoutShowRemoteState: false,
+          layoutShowSequence: true,
+          layoutShowLog: false,
+          layoutShowLeftPanel: false,
+          viewportShowExpand: false,
+          viewportShowToggleFullscreen: false,
+          viewportShowAnimation: false,
+          viewportShowSelectionMode: false,
+          volumeStreamingDisabled: true,
+          pdbProvider: "rcsb",
+          viewportBackgroundColor: "#" + canvasColor().toString(16).padStart(6, "0"),
+        });
+        return viewerPromise;
+      }
+
+      function renderHeader(entry) {
+        $("title").textContent = entry.id;
+        // PDB titles are in upper case, shown in sentence case for readability
+        const title = entry.title && entry.title === entry.title.toUpperCase()
+          ? entry.title.toLowerCase().replace(/(^|[.!?]\s+)([a-z])/g, (_, p, c) => p + c.toUpperCase())
+          : entry.title;
+        $("description").textContent = title ?? "";
+        $("description").hidden = !title;
+        $("subtitle").textContent = entry.subtitle ?? "";
+        $("stats").innerHTML = (entry.stats ?? [])
+          .map((s) => `<div><dt>${escapeHtml(s.label)}</dt><dd title="${escapeHtml(s.value)}">${escapeHtml(s.value)}</dd></div>`)
+          .join("");
+      }
+
+      /** Load a structure: structure text given to the tool, or a PDB entry from the URLs, the first that works */
+      async function show(entry) {
+        renderHeader(entry);
+        setStatus(`Loading ${escapeHtml(entry.id)}`);
+        try {
+          const viewer = await getViewer();
+          await viewer.plugin.clear();
+          if (entry.data) {
+            await viewer.loadStructureFromData(entry.data, entry.format);
+          } else {
+            let error;
+            for (const spec of entry.urls) {
+              const [kind, ...rest] = spec.split(":");
+              try {
+                await viewer.loadStructureFromUrl(rest.join(":"), "mmcif", kind === "bcif");
+                error = null;
+                break;
+              } catch (e) {
+                error = e;
+                await viewer.plugin.clear();
+              }
+            }
+            if (error) throw error;
+          }
+          setStatus("");
+        } catch (err) {
+          showError(`Could not load ${entry.id}: ${err?.message ?? err}`);
+        }
+      }
+
+      // PDB entries typed by the user, downloaded from RCSB by the widget
+      $("pdb-form").onsubmit = (e) => {
+        e.preventDefault();
+        const id = $("pdb-id").value.trim().toUpperCase();
+        if (!/^[0-9][A-Z0-9]{3}$/.test(id)) return;
+        void show({
+          kind: "pdb",
+          id,
+          subtitle: "RCSB Protein Data Bank",
+          format: "mmcif",
+          urls: [`bcif:https://models.rcsb.org/${id}.bcif`, `cif:https://files.rcsb.org/download/${id}.cif`],
+        });
+        void updateContext(`The user opened the PDB entry ${id} in the structure viewer`);
+      };
+
+      // Theme and display mode of the host as attributes on <html> for the CSS
+      function onContext(ctx) {
+        if (ctx.styles?.variables) applyHostStyleVariables(ctx.styles.variables);
+        if (ctx.styles?.css?.fonts) applyHostFonts(ctx.styles.css.fonts);
+        if (ctx.theme) applyDocumentTheme(ctx.theme);
+        if (ctx.displayMode) {
+          document.documentElement.dataset.mode = ctx.displayMode;
+          $("fullscreen").textContent = ctx.displayMode === "fullscreen" ? "Exit full screen" : "Full screen";
+        }
+        if (viewerPromise && (ctx.theme || ctx.styles)) {
+          void viewerPromise.then((v) => v.plugin.canvas3d?.setProps({ renderer: { backgroundColor: canvasColor() } }));
+        }
+      }
+      app.onhostcontextchanged = onContext;
+      // The host answers with the mode set, it may not send a context change
+      $("fullscreen").onclick = async () => {
+        const mode = document.documentElement.dataset.mode === "fullscreen" ? "inline" : "fullscreen";
+        onContext({ displayMode: (await app.requestDisplayMode({ mode })).mode });
+      };
+
+      // Tool arguments, to call the tool again when the result has no `structuredContent`, as some hosts give to
+      // widgets restored after a reload of the chat https://github.com/modelcontextprotocol/ext-apps/issues/696
+      let toolArgs;
+      // Name of the tool as the host knows it: behind an AgentCore Gateway it is prefixed with the target name
+      // (`<target>___show_structure`), the host context gives the name of the tool that opened the widget
+      const toolName = (fallback) => app.getHostContext()?.toolInfo?.tool?.name ?? fallback;
+      app.ontoolinput = (params) => (toolArgs = params.arguments);
+      app.ontoolresult = async (result) => {
+        if (!result.structuredContent && !result.isError && toolArgs) {
+          result = await app.callServerTool({ name: toolName("show_structure"), arguments: toolArgs }).catch(() => result);
+        }
+        const entry = result.structuredContent;
+        if (!entry) {
+          $("title").textContent = "No structure";
+          return showError(result.content?.find((c) => c.type === "text")?.text ?? "The tool returned no structure");
+        }
+        await show(entry);
+      };
+
+      await app.connect();
+      // Full screen button only when the host offers it
+      const host = app.getHostContext() ?? {};
+      $("fullscreen").hidden = Boolean(host.availableDisplayModes && !host.availableDisplayModes.includes("fullscreen"));
+      onContext(host);
+    </script>
+  </body>
+</html>

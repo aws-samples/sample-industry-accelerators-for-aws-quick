@@ -1,0 +1,30 @@
+# Sandbox environment `vcf`, built on `general`. See environments/general/pyproject.toml for how these files are
+# used; run `make lock` after changing dependencies and `npm run environments:catalog` after changing anything.
+[project]
+name = "sandbox-env-vcf"
+version = "0.1.0"
+description = "Genomic variant and alignment files: pysam to read, filter, annotate and write VCF/BCF, SAM/BAM/CRAM and tabix-indexed files, for example to filter annotated variants by ACMG/AMP criteria."
+license = "MIT-0"
+requires-python = ">=3.13,<3.14"
+dependencies = [
+    "pysam==0.24.1",
+]
+
+[tool.uv]
+package = false
+
+[tool.code-sandbox]
+title = "Variant and alignment files (VCF, BAM)"
+parent = "general"
+use-for = [
+    "Read and filter VCF/BCF records by INFO fields such as gnomAD allele frequency, ClinVar significance, REVEL or CADD",
+    "Collect ACMG/AMP evidence and write candidate variant tables",
+    "Query tabix-indexed files by region, and read SAM/BAM/CRAM alignments and coverage",
+]
+notes = [
+    "pysam includes htslib, and pysam.samtools / pysam.bcftools wrap those tools as Python functions, but there are no samtools, bcftools or tabix commands.",
+    "Alignment, variant calling and VEP annotation (BWA-MEM2, GATK, VEP) are not installed; run them as AWS HealthOmics workflows.",
+]
+
+[tool.code-sandbox.packages]
+pysam = { import = "pysam", summary = "htslib bindings: VariantFile (VCF/BCF), AlignmentFile (SAM/BAM/CRAM), TabixFile, FastaFile" }

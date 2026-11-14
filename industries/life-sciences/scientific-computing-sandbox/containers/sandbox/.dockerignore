@@ -1,0 +1,9 @@
+**
+!pyproject.toml
+!requirements.txt
+!build-requirements.txt
+!install-environment.sh
+!src/**
+!environments/*/pyproject.toml
+!environments/*/requirements.txt
+src/**/__pycache__

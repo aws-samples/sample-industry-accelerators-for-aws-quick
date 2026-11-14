@@ -1,0 +1,30 @@
+# Sandbox environment `rnaseq`, built on `general`. See environments/general/pyproject.toml for how these files are
+# used; run `make lock` after changing dependencies and `npm run environments:catalog` after changing anything.
+[project]
+name = "sandbox-env-rnaseq"
+version = "0.1.0"
+description = "Bulk RNA-seq differential expression: PyDESeq2, a Python implementation of DESeq2 (size factors, dispersion estimates, Wald tests, Benjamini-Hochberg correction, log fold change shrinkage) for gene-level count matrices."
+license = "MIT-0"
+requires-python = ">=3.13,<3.14"
+dependencies = [
+    "pydeseq2==0.5.4",
+]
+
+[tool.uv]
+package = false
+
+[tool.code-sandbox]
+title = "Bulk RNA-seq differential expression"
+parent = "general"
+use-for = [
+    "Differential expression between conditions from a genes x samples count matrix and sample metadata",
+    "Normalized counts, variance-stabilized expression and PCA of samples",
+    "Volcano and MA plots of DESeq2 results",
+]
+notes = [
+    "Read alignment and quantification (STAR, Salmon, featureCounts) are not installed; start from a counts matrix.",
+    "R and Bioconductor DESeq2 are not installed.",
+]
+
+[tool.code-sandbox.packages]
+pydeseq2 = { import = "pydeseq2", summary = "DESeq2 in Python: pydeseq2.dds.DeseqDataSet and pydeseq2.ds.DeseqStats" }

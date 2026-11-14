@@ -1,0 +1,1095 @@
+{
+  "python_version": "3.13",
+  "platform": "linux/arm64",
+  "environments": [
+    {
+      "id": "general",
+      "title": "General scientific Python",
+      "description": "NumPy, pandas and SciPy for tables, statistics and numerical work, such as parsing and summarizing QC reports. Every other environment includes these packages too.",
+      "parent": null,
+      "deploy": true,
+      "lineage": [
+        "general"
+      ],
+      "use_for": [
+        "Reading, joining, reshaping and summarizing tables (CSV, TSV, JSON) with pandas",
+        "Statistical tests, distributions, regression, optimization and linear algebra with SciPy and NumPy",
+        "Parsing and aggregating text reports such as FastQC summaries, samtools flagstat and Picard metrics",
+        "Scripts that need only the Python standard library"
+      ],
+      "notes": [
+        "No plotting library is installed."
+      ],
+      "packages": [
+        {
+          "name": "numpy",
+          "version": "2.5.4",
+          "import": "numpy",
+          "summary": "N-dimensional arrays, vectorized math, random numbers, linear algebra",
+          "layer": "general"
+        },
+        {
+          "name": "pandas",
+          "version": "3.1.1",
+          "import": "pandas",
+          "summary": "Data frames: read, filter, join, group, pivot and write tables",
+          "layer": "general"
+        },
+        {
+          "name": "scipy",
+          "version": "1.18.1",
+          "import": "scipy",
+          "summary": "Statistics (scipy.stats), optimization, interpolation, sparse matrices, signal processing",
+          "layer": "general"
+        }
+      ],
+      "programs": [],
+      "also_installed": [],
+      "installed": {
+        "numpy": "2.5.4",
+        "pandas": "3.1.1",
+        "python-dateutil": "2.9.0.post0",
+        "scipy": "1.18.1",
+        "six": "1.17.0"
+      }
+    },
+    {
+      "id": "chem",
+      "title": "Cheminformatics",
+      "description": "Small-molecule cheminformatics: RDKit for SMILES and SDF parsing, standardization, descriptors, fingerprints and similarity, substructure and SMARTS search, scaffolds, maximum common substructure, 3D conformers and drawing; mmpdb for matched molecular pair analysis.",
+      "parent": "general",
+      "deploy": true,
+      "lineage": [
+        "general",
+        "chem"
+      ],
+      "use_for": [
+        "Parse, validate and standardize SMILES, SDF and MOL files",
+        "Molecular descriptors and drug-likeness rules (molecular weight, logP, TPSA, Lipinski)",
+        "Fingerprints, Tanimoto similarity, clustering and diversity picking of compounds",
+        "Substructure and SMARTS searches, Murcko scaffolds, maximum common substructure",
+        "3D conformer generation and force-field optimization (ETKDG, MMFF, UFF)",
+        "Drawing molecules and grids to PNG or SVG",
+        "Matched molecular pair analysis with mmpdb"
+      ],
+      "notes": [
+        "Draw molecules with rdkit.Chem.Draw; no plotting library is installed."
+      ],
+      "packages": [
+        {
+          "name": "numpy",
+          "version": "2.5.4",
+          "import": "numpy",
+          "summary": "N-dimensional arrays, vectorized math, random numbers, linear algebra",
+          "layer": "general"
+        },
+        {
+          "name": "pandas",
+          "version": "3.1.1",
+          "import": "pandas",
+          "summary": "Data frames: read, filter, join, group, pivot and write tables",
+          "layer": "general"
+        },
+        {
+          "name": "scipy",
+          "version": "1.18.1",
+          "import": "scipy",
+          "summary": "Statistics (scipy.stats), optimization, interpolation, sparse matrices, signal processing",
+          "layer": "general"
+        },
+        {
+          "name": "rdkit",
+          "version": "2026.9.1",
+          "import": "rdkit",
+          "summary": "Cheminformatics toolkit (rdkit.Chem, AllChem, Descriptors, rdFingerprintGenerator, rdFMCS, Draw)",
+          "layer": "chem"
+        },
+        {
+          "name": "mmpdb",
+          "version": "3.1.6",
+          "import": "mmpdblib",
+          "summary": "Matched molecular pair indexing and transforms; use the mmpdb command",
+          "layer": "chem"
+        }
+      ],
+      "programs": [
+        {
+          "name": "mmpdb",
+          "summary": "Fragment, index and query matched molecular pair databases (mmpdb fragment, index, transform)",
+          "check": [
+            "mmpdb",
+            "--help"
+          ],
+          "layer": "chem"
+        }
+      ],
+      "also_installed": [
+        {
+          "name": "pillow",
+          "version": "13.0.0",
+          "import": "PIL"
+        }
+      ],
+      "installed": {
+        "click": "8.5.0",
+        "mmpdb": "3.1.6",
+        "numpy": "2.5.4",
+        "pandas": "3.1.1",
+        "peewee": "4.5.3",
+        "pillow": "13.0.0",
+        "python-dateutil": "2.9.0.post0",
+        "rdkit": "2026.9.1",
+        "scipy": "1.18.1",
+        "six": "1.17.0"
+      }
+    },
+    {
+      "id": "dicom",
+      "title": "Medical imaging (DICOM and NIfTI)",
+      "description": "Medical imaging files: pydicom to read, write, inspect and de-identify DICOM, nibabel for NIfTI and other neuroimaging formats, and the dcm2niix command to convert DICOM series to NIfTI with BIDS JSON sidecars.",
+      "parent": "general",
+      "deploy": true,
+      "lineage": [
+        "general",
+        "dicom"
+      ],
+      "use_for": [
+        "Read DICOM headers and pixel data, list series and tags, check acquisition parameters",
+        "De-identify or edit DICOM attributes and write new DICOM files",
+        "Convert DICOM series to NIfTI (with BIDS sidecars) using dcm2niix",
+        "Load, resample, reorient and save NIfTI volumes and compute simple image statistics"
+      ],
+      "notes": [
+        "Compressed transfer syntaxes that need extra codecs (for example JPEG 2000 through pylibjpeg or GDCM) may not decode."
+      ],
+      "packages": [
+        {
+          "name": "numpy",
+          "version": "2.5.4",
+          "import": "numpy",
+          "summary": "N-dimensional arrays, vectorized math, random numbers, linear algebra",
+          "layer": "general"
+        },
+        {
+          "name": "pandas",
+          "version": "3.1.1",
+          "import": "pandas",
+          "summary": "Data frames: read, filter, join, group, pivot and write tables",
+          "layer": "general"
+        },
+        {
+          "name": "scipy",
+          "version": "1.18.1",
+          "import": "scipy",
+          "summary": "Statistics (scipy.stats), optimization, interpolation, sparse matrices, signal processing",
+          "layer": "general"
+        },
+        {
+          "name": "pydicom",
+          "version": "3.0.2",
+          "import": "pydicom",
+          "summary": "Read, modify and write DICOM files and datasets",
+          "layer": "dicom"
+        },
+        {
+          "name": "nibabel",
+          "version": "5.4.2",
+          "import": "nibabel",
+          "summary": "Read and write NIfTI, MGH, GIFTI, CIFTI and other neuroimaging formats",
+          "layer": "dicom"
+        },
+        {
+          "name": "dcm2niix",
+          "version": "1.0.20261029",
+          "summary": "DICOM to NIfTI converter; use the dcm2niix command",
+          "layer": "dicom"
+        }
+      ],
+      "programs": [
+        {
+          "name": "dcm2niix",
+          "summary": "Convert DICOM series to NIfTI with BIDS JSON sidecars (dcm2niix -z y -o <out_dir> <dicom_dir>)",
+          "check": [
+            "dcm2niix",
+            "-h"
+          ],
+          "layer": "dicom"
+        }
+      ],
+      "also_installed": [],
+      "installed": {
+        "dcm2niix": "1.0.20261029",
+        "nibabel": "5.4.2",
+        "numpy": "2.5.4",
+        "packaging": "26.3",
+        "pandas": "3.1.1",
+        "pydicom": "3.0.2",
+        "python-dateutil": "2.9.0.post0",
+        "scipy": "1.18.1",
+        "six": "1.17.0"
+      }
+    },
+    {
+      "id": "multiomics",
+      "title": "Multi-omics integration",
+      "description": "Multi-omics integration and pathway analysis: scikit-learn for machine learning, pyComBat (combat) for batch correction, mofapy2 for MOFA+ factor analysis, and GSEApy for GSEA, preranked GSEA, ssGSEA and over-representation analysis against gene sets supplied as files.",
+      "parent": "general",
+      "deploy": true,
+      "lineage": [
+        "general",
+        "multiomics"
+      ],
+      "use_for": [
+        "Batch correction of expression or omics matrices with ComBat",
+        "Integrating several omics layers into latent factors with MOFA+",
+        "Gene set enrichment (GSEA, prerank, ssGSEA, over-representation with gseapy.enrich) against GMT files or dictionaries",
+        "Clustering, dimensionality reduction and classifiers with scikit-learn"
+      ],
+      "notes": [
+        "The sandbox has no internet access, so Enrichr, gseapy.get_library and gene ID mapping services (MyGene.info, biomaRt) are unavailable. Write gene sets to a GMT file and map identifiers before the data reaches the sandbox.",
+        "R and Bioconductor (biomaRt, sva, MOFA2, fgsea) are not installed."
+      ],
+      "packages": [
+        {
+          "name": "numpy",
+          "version": "2.5.4",
+          "import": "numpy",
+          "summary": "N-dimensional arrays, vectorized math, random numbers, linear algebra",
+          "layer": "general"
+        },
+        {
+          "name": "pandas",
+          "version": "3.1.1",
+          "import": "pandas",
+          "summary": "Data frames: read, filter, join, group, pivot and write tables",
+          "layer": "general"
+        },
+        {
+          "name": "scipy",
+          "version": "1.18.1",
+          "import": "scipy",
+          "summary": "Statistics (scipy.stats), optimization, interpolation, sparse matrices, signal processing",
+          "layer": "general"
+        },
+        {
+          "name": "scikit-learn",
+          "version": "1.9.1",
+          "import": "sklearn",
+          "summary": "Machine learning: preprocessing, PCA, clustering, classifiers, cross-validation",
+          "layer": "multiomics"
+        },
+        {
+          "name": "combat",
+          "version": "0.3.3",
+          "import": "combat",
+          "summary": "pyComBat batch effect correction (from combat.pycombat import pycombat)",
+          "layer": "multiomics"
+        },
+        {
+          "name": "mofapy2",
+          "version": "0.7.5",
+          "import": "mofapy2",
+          "summary": "MOFA+ multi-omics factor analysis (mofapy2.run.entry_point)",
+          "layer": "multiomics"
+        },
+        {
+          "name": "gseapy",
+          "version": "1.3.2",
+          "import": "gseapy",
+          "summary": "GSEA, prerank, ssGSEA and over-representation (enrich) with local gene sets, and enrichment plots",
+          "layer": "multiomics"
+        }
+      ],
+      "programs": [],
+      "also_installed": [
+        {
+          "name": "h5py",
+          "version": "3.16.0",
+          "import": "h5py"
+        },
+        {
+          "name": "joblib",
+          "version": "1.6.0",
+          "import": "joblib"
+        },
+        {
+          "name": "matplotlib",
+          "version": "3.11.2",
+          "import": "matplotlib"
+        },
+        {
+          "name": "pillow",
+          "version": "13.0.0",
+          "import": "PIL"
+        },
+        {
+          "name": "requests",
+          "version": "2.34.2",
+          "import": "requests"
+        }
+      ],
+      "installed": {
+        "certifi": "2026.10.23",
+        "charset-normalizer": "3.5.2",
+        "cloudpickle": "3.1.2",
+        "combat": "0.3.3",
+        "contourpy": "1.4.0",
+        "cycler": "0.12.1",
+        "fonttools": "4.68.0",
+        "gseapy": "1.3.2",
+        "h5py": "3.16.0",
+        "idna": "3.20",
+        "joblib": "1.6.0",
+        "kiwisolver": "1.5.1",
+        "matplotlib": "3.11.2",
+        "mofapy2": "0.7.5",
+        "mpmath": "1.4.1",
+        "narwhals": "2.28.0",
+        "numpy": "2.5.4",
+        "packaging": "26.3",
+        "pandas": "3.1.1",
+        "patsy": "1.0.3",
+        "pillow": "13.0.0",
+        "pyparsing": "3.3.3",
+        "python-dateutil": "2.9.0.post0",
+        "requests": "2.34.2",
+        "scikit-learn": "1.9.1",
+        "scipy": "1.18.1",
+        "six": "1.17.0",
+        "threadpoolctl": "3.7.0",
+        "urllib3": "2.8.0"
+      }
+    },
+    {
+      "id": "rnaseq",
+      "title": "Bulk RNA-seq differential expression",
+      "description": "Bulk RNA-seq differential expression: PyDESeq2, a Python implementation of DESeq2 (size factors, dispersion estimates, Wald tests, Benjamini-Hochberg correction, log fold change shrinkage) for gene-level count matrices.",
+      "parent": "general",
+      "deploy": true,
+      "lineage": [
+        "general",
+        "rnaseq"
+      ],
+      "use_for": [
+        "Differential expression between conditions from a genes x samples count matrix and sample metadata",
+        "Normalized counts, variance-stabilized expression and PCA of samples",
+        "Volcano and MA plots of DESeq2 results"
+      ],
+      "notes": [
+        "Read alignment and quantification (STAR, Salmon, featureCounts) are not installed; start from a counts matrix.",
+        "R and Bioconductor DESeq2 are not installed."
+      ],
+      "packages": [
+        {
+          "name": "numpy",
+          "version": "2.5.4",
+          "import": "numpy",
+          "summary": "N-dimensional arrays, vectorized math, random numbers, linear algebra",
+          "layer": "general"
+        },
+        {
+          "name": "pandas",
+          "version": "3.1.1",
+          "import": "pandas",
+          "summary": "Data frames: read, filter, join, group, pivot and write tables",
+          "layer": "general"
+        },
+        {
+          "name": "scipy",
+          "version": "1.18.1",
+          "import": "scipy",
+          "summary": "Statistics (scipy.stats), optimization, interpolation, sparse matrices, signal processing",
+          "layer": "general"
+        },
+        {
+          "name": "pydeseq2",
+          "version": "0.5.4",
+          "import": "pydeseq2",
+          "summary": "DESeq2 in Python: pydeseq2.dds.DeseqDataSet and pydeseq2.ds.DeseqStats",
+          "layer": "rnaseq"
+        }
+      ],
+      "programs": [],
+      "also_installed": [
+        {
+          "name": "anndata",
+          "version": "0.13.4",
+          "import": "anndata"
+        },
+        {
+          "name": "h5py",
+          "version": "3.16.0",
+          "import": "h5py"
+        },
+        {
+          "name": "joblib",
+          "version": "1.6.0",
+          "import": "joblib"
+        },
+        {
+          "name": "matplotlib",
+          "version": "3.11.2",
+          "import": "matplotlib"
+        },
+        {
+          "name": "pillow",
+          "version": "13.0.0",
+          "import": "PIL"
+        },
+        {
+          "name": "pyyaml",
+          "version": "6.0.3",
+          "import": "yaml"
+        },
+        {
+          "name": "scikit-learn",
+          "version": "1.9.1",
+          "import": "sklearn"
+        },
+        {
+          "name": "zarr",
+          "version": "3.4.2",
+          "import": "zarr"
+        }
+      ],
+      "installed": {
+        "anndata": "0.13.4",
+        "annotated-types": "0.8.0",
+        "array-api-compat": "1.16.0",
+        "cloudpickle": "3.1.2",
+        "contourpy": "1.4.0",
+        "cycler": "0.12.1",
+        "donfig": "0.8.1.post1",
+        "fonttools": "4.68.0",
+        "formulaic": "1.2.2",
+        "formulaic-contrasts": "1.0.0",
+        "google-crc32c": "1.9.0",
+        "h5py": "3.16.0",
+        "interface-meta": "2.0.1",
+        "joblib": "1.6.0",
+        "kiwisolver": "1.5.1",
+        "legacy-api-wrap": "1.5",
+        "matplotlib": "3.11.2",
+        "msgspec": "0.22.0",
+        "narwhals": "2.28.0",
+        "natsort": "8.4.0",
+        "numcodecs": "0.17.1",
+        "numpy": "2.5.4",
+        "packaging": "26.3",
+        "pandas": "3.1.1",
+        "pillow": "13.0.0",
+        "pydantic": "2.14.2",
+        "pydantic-core": "2.50.2",
+        "pydantic-settings": "2.16.2",
+        "pydeseq2": "0.5.4",
+        "pyparsing": "3.3.3",
+        "python-dateutil": "2.9.0.post0",
+        "python-dotenv": "1.2.4",
+        "pyyaml": "6.0.3",
+        "scikit-learn": "1.9.1",
+        "scipy": "1.18.1",
+        "scverse-misc": "0.1.8",
+        "session-info": "1.0.1",
+        "session-info2": "0.4.2",
+        "six": "1.17.0",
+        "stdlib-list": "0.12.0",
+        "threadpoolctl": "3.7.0",
+        "typing-extensions": "4.16.0",
+        "typing-inspection": "0.4.5",
+        "wrapt": "2.5.2",
+        "zarr": "3.4.2"
+      }
+    },
+    {
+      "id": "scbase",
+      "title": "Single-cell base layer",
+      "description": "Single-cell base layer: Scanpy and AnnData with Leiden clustering (leidenalg, python-igraph).",
+      "parent": "general",
+      "deploy": false,
+      "lineage": [
+        "general",
+        "scbase"
+      ],
+      "use_for": [],
+      "notes": [],
+      "packages": [
+        {
+          "name": "numpy",
+          "version": "2.5.4",
+          "import": "numpy",
+          "summary": "N-dimensional arrays, vectorized math, random numbers, linear algebra",
+          "layer": "general"
+        },
+        {
+          "name": "pandas",
+          "version": "3.1.1",
+          "import": "pandas",
+          "summary": "Data frames: read, filter, join, group, pivot and write tables",
+          "layer": "general"
+        },
+        {
+          "name": "scipy",
+          "version": "1.18.1",
+          "import": "scipy",
+          "summary": "Statistics (scipy.stats), optimization, interpolation, sparse matrices, signal processing",
+          "layer": "general"
+        },
+        {
+          "name": "scanpy",
+          "version": "1.12.5",
+          "import": "scanpy",
+          "summary": "Single-cell analysis: QC, normalization, PCA, neighbors, UMAP, clustering, marker genes, plots",
+          "layer": "scbase"
+        },
+        {
+          "name": "anndata",
+          "version": "0.13.2",
+          "import": "anndata",
+          "summary": "Annotated data matrices and the .h5ad file format",
+          "layer": "scbase"
+        },
+        {
+          "name": "leidenalg",
+          "version": "0.12.0",
+          "import": "leidenalg",
+          "summary": "Leiden community detection (scanpy.tl.leiden)",
+          "layer": "scbase"
+        },
+        {
+          "name": "python-igraph",
+          "version": "1.0.0",
+          "import": "igraph",
+          "summary": "Graph library used for Leiden clustering and PAGA",
+          "layer": "scbase"
+        }
+      ],
+      "programs": [],
+      "also_installed": [
+        {
+          "name": "h5py",
+          "version": "3.16.0",
+          "import": "h5py"
+        },
+        {
+          "name": "joblib",
+          "version": "1.6.0",
+          "import": "joblib"
+        },
+        {
+          "name": "matplotlib",
+          "version": "3.11.2",
+          "import": "matplotlib"
+        },
+        {
+          "name": "networkx",
+          "version": "3.7",
+          "import": "networkx"
+        },
+        {
+          "name": "numba",
+          "version": "0.68.1",
+          "import": "numba"
+        },
+        {
+          "name": "pillow",
+          "version": "13.0.0",
+          "import": "PIL"
+        },
+        {
+          "name": "pyyaml",
+          "version": "6.0.3",
+          "import": "yaml"
+        },
+        {
+          "name": "scikit-learn",
+          "version": "1.9.1",
+          "import": "sklearn"
+        },
+        {
+          "name": "seaborn",
+          "version": "0.13.2",
+          "import": "seaborn"
+        },
+        {
+          "name": "statsmodels",
+          "version": "0.15.0",
+          "import": "statsmodels"
+        },
+        {
+          "name": "tqdm",
+          "version": "4.70.1",
+          "import": "tqdm"
+        },
+        {
+          "name": "umap-learn",
+          "version": "0.5.12",
+          "import": "umap"
+        },
+        {
+          "name": "zarr",
+          "version": "3.4.2",
+          "import": "zarr"
+        }
+      ],
+      "installed": {
+        "anndata": "0.13.2",
+        "annotated-types": "0.8.0",
+        "array-api-compat": "1.16.0",
+        "certifi": "2026.10.23",
+        "cloudpickle": "3.1.2",
+        "contourpy": "1.4.0",
+        "cycler": "0.12.1",
+        "donfig": "0.8.1.post1",
+        "fast-array-utils": "1.5.1",
+        "fonttools": "4.68.0",
+        "formulaic": "1.2.2",
+        "google-crc32c": "1.9.0",
+        "h5py": "3.16.0",
+        "igraph": "1.0.0",
+        "interface-meta": "2.0.1",
+        "joblib": "1.6.0",
+        "kiwisolver": "1.5.1",
+        "legacy-api-wrap": "1.5",
+        "leidenalg": "0.12.0",
+        "llvmlite": "0.50.0",
+        "matplotlib": "3.11.2",
+        "msgspec": "0.22.0",
+        "narwhals": "2.28.0",
+        "natsort": "8.4.0",
+        "networkx": "3.7",
+        "numba": "0.68.1",
+        "numcodecs": "0.17.1",
+        "numpy": "2.5.4",
+        "packaging": "26.3",
+        "pandas": "3.1.1",
+        "patsy": "1.0.3",
+        "pillow": "13.0.0",
+        "pydantic": "2.14.2",
+        "pydantic-core": "2.50.2",
+        "pydantic-settings": "2.16.2",
+        "pynndescent": "0.7.0",
+        "pyparsing": "3.3.3",
+        "python-dateutil": "2.9.0.post0",
+        "python-dotenv": "1.2.4",
+        "python-igraph": "1.0.0",
+        "pyyaml": "6.0.3",
+        "scanpy": "1.12.5",
+        "scikit-learn": "1.9.1",
+        "scipy": "1.18.1",
+        "scverse-misc": "0.1.8",
+        "seaborn": "0.13.2",
+        "session-info2": "0.4.2",
+        "six": "1.17.0",
+        "statsmodels": "0.15.0",
+        "texttable": "1.7.2",
+        "threadpoolctl": "3.7.0",
+        "tqdm": "4.70.1",
+        "typing-extensions": "4.16.0",
+        "typing-inspection": "0.4.5",
+        "umap-learn": "0.5.12",
+        "wrapt": "2.5.2",
+        "zarr": "3.4.2"
+      }
+    },
+    {
+      "id": "vcf",
+      "title": "Variant and alignment files (VCF, BAM)",
+      "description": "Genomic variant and alignment files: pysam to read, filter, annotate and write VCF/BCF, SAM/BAM/CRAM and tabix-indexed files, for example to filter annotated variants by ACMG/AMP criteria.",
+      "parent": "general",
+      "deploy": true,
+      "lineage": [
+        "general",
+        "vcf"
+      ],
+      "use_for": [
+        "Read and filter VCF/BCF records by INFO fields such as gnomAD allele frequency, ClinVar significance, REVEL or CADD",
+        "Collect ACMG/AMP evidence and write candidate variant tables",
+        "Query tabix-indexed files by region, and read SAM/BAM/CRAM alignments and coverage"
+      ],
+      "notes": [
+        "pysam includes htslib, and pysam.samtools / pysam.bcftools wrap those tools as Python functions, but there are no samtools, bcftools or tabix commands.",
+        "Alignment, variant calling and VEP annotation (BWA-MEM2, GATK, VEP) are not installed; run them as AWS HealthOmics workflows."
+      ],
+      "packages": [
+        {
+          "name": "numpy",
+          "version": "2.5.4",
+          "import": "numpy",
+          "summary": "N-dimensional arrays, vectorized math, random numbers, linear algebra",
+          "layer": "general"
+        },
+        {
+          "name": "pandas",
+          "version": "3.1.1",
+          "import": "pandas",
+          "summary": "Data frames: read, filter, join, group, pivot and write tables",
+          "layer": "general"
+        },
+        {
+          "name": "scipy",
+          "version": "1.18.1",
+          "import": "scipy",
+          "summary": "Statistics (scipy.stats), optimization, interpolation, sparse matrices, signal processing",
+          "layer": "general"
+        },
+        {
+          "name": "pysam",
+          "version": "0.24.1",
+          "import": "pysam",
+          "summary": "htslib bindings: VariantFile (VCF/BCF), AlignmentFile (SAM/BAM/CRAM), TabixFile, FastaFile",
+          "layer": "vcf"
+        }
+      ],
+      "programs": [],
+      "also_installed": [],
+      "installed": {
+        "numpy": "2.5.4",
+        "pandas": "3.1.1",
+        "pysam": "0.24.1",
+        "python-dateutil": "2.9.0.post0",
+        "scipy": "1.18.1",
+        "six": "1.17.0"
+      }
+    },
+    {
+      "id": "sctraj",
+      "title": "Single-cell analysis and trajectories",
+      "description": "Single-cell RNA-seq analysis and trajectories: Scanpy and AnnData (QC, normalization, PCA, neighbors, UMAP, Leiden clustering, marker genes), scVelo for RNA velocity, CellRank for cell fate and trajectory inference, and Squidpy for spatial transcriptomics.",
+      "parent": "scbase",
+      "deploy": true,
+      "lineage": [
+        "general",
+        "scbase",
+        "sctraj"
+      ],
+      "use_for": [
+        "Single-cell QC, normalization, highly variable genes, PCA, neighbors, UMAP and Leiden clustering with Scanpy",
+        "Marker genes and differential expression between clusters",
+        "RNA velocity from spliced and unspliced counts (loom or h5ad) with scVelo",
+        "Cell fate probabilities, terminal states and driver genes with CellRank",
+        "Spatial neighborhood enrichment, co-occurrence and spatial statistics with Squidpy"
+      ],
+      "notes": [
+        "The sandbox has no internet access, so the example datasets in scanpy.datasets, scvelo.datasets and squidpy.datasets cannot be downloaded. Write the user's data to the sandbox or simulate data."
+      ],
+      "packages": [
+        {
+          "name": "numpy",
+          "version": "2.5.4",
+          "import": "numpy",
+          "summary": "N-dimensional arrays, vectorized math, random numbers, linear algebra",
+          "layer": "general"
+        },
+        {
+          "name": "pandas",
+          "version": "3.1.1",
+          "import": "pandas",
+          "summary": "Data frames: read, filter, join, group, pivot and write tables",
+          "layer": "general"
+        },
+        {
+          "name": "scipy",
+          "version": "1.18.1",
+          "import": "scipy",
+          "summary": "Statistics (scipy.stats), optimization, interpolation, sparse matrices, signal processing",
+          "layer": "general"
+        },
+        {
+          "name": "scanpy",
+          "version": "1.12.5",
+          "import": "scanpy",
+          "summary": "Single-cell analysis: QC, normalization, PCA, neighbors, UMAP, clustering, marker genes, plots",
+          "layer": "scbase"
+        },
+        {
+          "name": "anndata",
+          "version": "0.13.2",
+          "import": "anndata",
+          "summary": "Annotated data matrices and the .h5ad file format",
+          "layer": "scbase"
+        },
+        {
+          "name": "leidenalg",
+          "version": "0.12.0",
+          "import": "leidenalg",
+          "summary": "Leiden community detection (scanpy.tl.leiden)",
+          "layer": "scbase"
+        },
+        {
+          "name": "python-igraph",
+          "version": "1.0.0",
+          "import": "igraph",
+          "summary": "Graph library used for Leiden clustering and PAGA",
+          "layer": "scbase"
+        },
+        {
+          "name": "scvelo",
+          "version": "0.3.4",
+          "import": "scvelo",
+          "summary": "RNA velocity: moments, stochastic and dynamical models, velocity graphs and plots",
+          "layer": "sctraj"
+        },
+        {
+          "name": "cellrank",
+          "version": "2.0.7",
+          "import": "cellrank",
+          "summary": "Cell fate mapping with kernels (velocity, pseudotime, connectivity) and GPCCA estimators",
+          "layer": "sctraj"
+        },
+        {
+          "name": "squidpy",
+          "version": "1.8.3",
+          "import": "squidpy",
+          "summary": "Spatial omics: spatial graphs, neighborhood enrichment, Moran's I, image features",
+          "layer": "sctraj"
+        }
+      ],
+      "programs": [],
+      "also_installed": [
+        {
+          "name": "dask",
+          "version": "2026.8.0",
+          "import": "dask"
+        },
+        {
+          "name": "h5py",
+          "version": "3.16.0",
+          "import": "h5py"
+        },
+        {
+          "name": "joblib",
+          "version": "1.6.0",
+          "import": "joblib"
+        },
+        {
+          "name": "matplotlib",
+          "version": "3.11.2",
+          "import": "matplotlib"
+        },
+        {
+          "name": "networkx",
+          "version": "3.7",
+          "import": "networkx"
+        },
+        {
+          "name": "numba",
+          "version": "0.68.1",
+          "import": "numba"
+        },
+        {
+          "name": "pillow",
+          "version": "13.0.0",
+          "import": "PIL"
+        },
+        {
+          "name": "pyarrow",
+          "version": "26.0.1",
+          "import": "pyarrow"
+        },
+        {
+          "name": "pyyaml",
+          "version": "6.0.3",
+          "import": "yaml"
+        },
+        {
+          "name": "requests",
+          "version": "2.34.2",
+          "import": "requests"
+        },
+        {
+          "name": "scikit-image",
+          "version": "0.26.0",
+          "import": "skimage"
+        },
+        {
+          "name": "scikit-learn",
+          "version": "1.9.1",
+          "import": "sklearn"
+        },
+        {
+          "name": "seaborn",
+          "version": "0.13.2",
+          "import": "seaborn"
+        },
+        {
+          "name": "statsmodels",
+          "version": "0.15.0",
+          "import": "statsmodels"
+        },
+        {
+          "name": "tifffile",
+          "version": "2026.10.15",
+          "import": "tifffile"
+        },
+        {
+          "name": "tqdm",
+          "version": "4.70.1",
+          "import": "tqdm"
+        },
+        {
+          "name": "umap-learn",
+          "version": "0.5.12",
+          "import": "umap"
+        },
+        {
+          "name": "xarray",
+          "version": "2026.9.0",
+          "import": "xarray"
+        },
+        {
+          "name": "zarr",
+          "version": "3.4.2",
+          "import": "zarr"
+        }
+      ],
+      "installed": {
+        "aiobotocore": "3.10.0",
+        "aiohappyeyeballs": "2.7.1",
+        "aiohttp": "3.14.5",
+        "aioitertools": "0.13.0",
+        "aiosignal": "1.4.0",
+        "anndata": "0.13.2",
+        "annotated-types": "0.8.0",
+        "annsel": "0.1.3",
+        "array-api-compat": "1.16.0",
+        "attrs": "26.1.0",
+        "botocore": "1.43.117",
+        "cellrank": "2.0.7",
+        "certifi": "2026.10.23",
+        "charset-normalizer": "3.5.2",
+        "click": "8.5.0",
+        "cloudpickle": "3.1.2",
+        "colorcet": "3.2.1",
+        "contourpy": "1.4.0",
+        "cycler": "0.12.1",
+        "dask": "2026.8.0",
+        "dask-image": "2026.5.0",
+        "datashader": "0.19.1",
+        "deprecated": "3.0.1",
+        "distributed": "2026.8.0",
+        "docrep": "0.3.2",
+        "donfig": "0.8.1.post1",
+        "fast-array-utils": "1.5.1",
+        "fonttools": "4.68.0",
+        "formulaic": "1.2.2",
+        "frozenlist": "1.8.0",
+        "fsspec": "2026.9.0",
+        "geopandas": "1.2.0",
+        "google-crc32c": "1.9.0",
+        "h5py": "3.16.0",
+        "idna": "3.20",
+        "igraph": "1.0.0",
+        "imagecodecs": "2025.11.11",
+        "imageio": "2.38.1",
+        "inflect": "7.6.0",
+        "interface-meta": "2.0.1",
+        "jaraco-functools": "4.6.0",
+        "jinja2": "3.1.6",
+        "jmespath": "1.1.0",
+        "joblib": "1.6.0",
+        "kiwisolver": "1.5.1",
+        "lazy-loader": "0.6",
+        "legacy-api-wrap": "1.5",
+        "leidenalg": "0.12.0",
+        "llvmlite": "0.50.0",
+        "locket": "1.0.0",
+        "loompy": "3.0.8",
+        "markdown-it-py": "4.2.0",
+        "markupsafe": "3.0.4",
+        "matplotlib": "3.11.2",
+        "matplotlib-scalebar": "0.9.0",
+        "mdurl": "0.1.2",
+        "more-itertools": "11.2.1",
+        "msgpack": "1.2.4",
+        "msgspec": "0.22.0",
+        "multidict": "7.2.1",
+        "multipledispatch": "1.0.0",
+        "multiscale-spatial-image": "2.0.3",
+        "narwhals": "2.28.0",
+        "natsort": "8.4.0",
+        "networkx": "3.7",
+        "numba": "0.68.1",
+        "numcodecs": "0.17.1",
+        "numpy": "2.5.4",
+        "numpy-groupies": "0.16.2",
+        "ome-zarr": "0.18.0",
+        "ome-zarr-models": "1.6",
+        "omnipath": "1.0.12",
+        "packaging": "26.3",
+        "pandas": "3.1.1",
+        "param": "2.4.2",
+        "partd": "1.4.2",
+        "pathlib-abc": "0.5.2",
+        "patsy": "1.0.3",
+        "pillow": "13.0.0",
+        "pims": "0.7",
+        "platformdirs": "4.14.5",
+        "pooch": "1.9.0",
+        "progressbar2": "4.6.0",
+        "propcache": "0.5.4",
+        "psutil": "7.2.2",
+        "pyarrow": "26.0.1",
+        "pyct": "0.6.0",
+        "pydantic": "2.14.2",
+        "pydantic-core": "2.50.2",
+        "pydantic-settings": "2.16.2",
+        "pydantic-zarr": "0.10.0",
+        "pygam": "0.9.1",
+        "pygments": "2.21.0",
+        "pygpcca": "1.0.4",
+        "pynndescent": "0.7.0",
+        "pyogrio": "0.13.0",
+        "pyparsing": "3.3.3",
+        "pyproj": "3.8.0",
+        "python-dateutil": "2.9.0.post0",
+        "python-dotenv": "1.2.4",
+        "python-igraph": "1.0.0",
+        "python-utils": "4.1.4",
+        "pyyaml": "6.0.3",
+        "rangehttpserver": "1.4.0",
+        "requests": "2.34.2",
+        "rich": "15.0.0",
+        "s3fs": "2026.9.0",
+        "scanpy": "1.12.5",
+        "scikit-image": "0.26.0",
+        "scikit-learn": "1.9.1",
+        "scipy": "1.18.1",
+        "scvelo": "0.3.4",
+        "scverse-misc": "0.1.8",
+        "seaborn": "0.13.2",
+        "session-info2": "0.4.2",
+        "setuptools": "84.2.1",
+        "shapely": "2.2.0",
+        "six": "1.17.0",
+        "slicerator": "1.1.0",
+        "sortedcontainers": "2.4.0",
+        "spatial-image": "1.2.3",
+        "spatialdata": "0.8.0",
+        "spatialdata-plot": "0.4.3",
+        "squidpy": "1.8.3",
+        "statsmodels": "0.15.0",
+        "tblib": "3.2.2",
+        "texttable": "1.7.2",
+        "threadpoolctl": "3.7.0",
+        "tifffile": "2026.10.15",
+        "toolz": "1.2.0",
+        "tornado": "6.6",
+        "tqdm": "4.70.1",
+        "typeguard": "4.6.0",
+        "typing-extensions": "4.16.0",
+        "typing-inspection": "0.4.5",
+        "umap-learn": "0.5.12",
+        "universal-pathlib": "0.3.10",
+        "urllib3": "2.8.0",
+        "validators": "0.36.0",
+        "wrapt": "2.5.2",
+        "xarray": "2026.9.0",
+        "xarray-dataclass": "3.0.0",
+        "xarray-spatial": "0.10.20",
+        "yarl": "1.25.1",
+        "zarr": "3.4.2",
+        "zict": "3.0.0"
+      }
+    }
+  ]
+}
